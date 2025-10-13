@@ -28,7 +28,7 @@
             android:value="AIzaSyAbRfYiATzpAsZ-z1cc4vRqcI0yL4M3Hmg"/>
 
         <activity
-            android:name=".MainActivity"
+            android:name=".LOGIN.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
