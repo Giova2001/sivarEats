@@ -19,7 +19,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.SivarEats">
 
-         <!-- Google Maps API Key -->
+        <!-- Google Maps API Key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyAbRfYiATzpAsZ-z1cc4vRqcI0yL4M3Hmg" />
