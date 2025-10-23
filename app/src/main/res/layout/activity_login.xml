@@ -124,18 +124,25 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Botón Iniciar Sesión -->
+
+        <!-- Enlaces de registro y recuperación -->
+        <CheckBox
+            android:id="@+id/checkBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Guardar datos de inicio de sesion" />
+
         <Button
             android:id="@+id/btnLogin"
             android:layout_width="match_parent"
             android:layout_height="48dp"
+            android:layout_marginBottom="24dp"
             android:backgroundTint="@color/info"
             android:text="Iniciar sesión"
             android:textColor="@android:color/white"
             android:textSize="16sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="24dp" />
+            android:textStyle="bold" />
 
-        <!-- Enlaces de registro y recuperación -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

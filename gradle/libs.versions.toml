@@ -17,6 +17,8 @@ navigationRuntime = "2.9.5"
 roomCommonJvm = "2.8.2"
 roomRuntime = "2.8.2"
 roomCompiler = "2.8.2"
+firebaseAuth = "24.0.1"
+firebaseDatabase = "22.0.1"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -41,6 +43,8 @@ navigation-runtime = { group = "androidx.navigation", name = "navigation-runtime
 room-common-jvm = { group = "androidx.room", name = "room-common-jvm", version.ref = "roomCommonJvm" }
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "roomRuntime" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "roomCompiler" }
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth", version.ref = "firebaseAuth" }
+firebase-database = { group = "com.google.firebase", name = "firebase-database", version.ref = "firebaseDatabase" }
 
 
 [plugins]

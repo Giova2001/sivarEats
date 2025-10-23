@@ -26,13 +26,22 @@
         <activity
             android:name=".ui.profile.EditProfileActivity"
             android:exported="false" />
+
         <activity
             android:name=".LOGIN.LoginActivity"
             android:exported="false" />
 
         <activity
+            android:name=".LOGIN.LoginRegisterActivity"
+            android:exported="false" />
+
+        <activity android:name=".ui.NavegacionActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".LOGIN.MainActivity"
             android:exported="true">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

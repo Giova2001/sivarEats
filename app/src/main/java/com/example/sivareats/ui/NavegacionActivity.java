@@ -137,12 +137,25 @@ public class NavegacionActivity extends AppCompatActivity {
         });
     }
 
+    private Fragment activeFragment;
+
     private void loadFragment(Fragment fragment) {
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-        transaction.replace(R.id.fragment_container, fragment);
-        transaction.addToBackStack(null);
+
+        if (activeFragment != null) {
+            transaction.hide(activeFragment);
+        }
+
+        if (getSupportFragmentManager().findFragmentByTag(fragment.getClass().getSimpleName()) == null) {
+            transaction.add(R.id.fragment_container, fragment, fragment.getClass().getSimpleName());
+        } else {
+            transaction.show(fragment);
+        }
+
+        activeFragment = fragment;
         transaction.commit();
     }
+
 
     public void OnBackPressed() {
         if (bottomNavigationView.getSelectedItemId() == R.id.nav_home) {
