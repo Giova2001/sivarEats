@@ -18,6 +18,15 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.SivarEats">
+        <activity
+            android:name=".ui.profile.LocationEditActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.profile.LocationItemActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.profile.UbicationActivity"
+            android:exported="false" />
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
@@ -26,22 +35,18 @@
         <activity
             android:name=".ui.profile.EditProfileActivity"
             android:exported="false" />
-
         <activity
             android:name=".LOGIN.LoginActivity"
             android:exported="false" />
-
         <activity
             android:name=".LOGIN.LoginRegisterActivity"
             android:exported="false" />
-
-        <activity android:name=".ui.NavegacionActivity"
+        <activity
+            android:name=".ui.NavegacionActivity"
             android:exported="false" />
-
         <activity
             android:name=".LOGIN.MainActivity"
             android:exported="true">
-
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

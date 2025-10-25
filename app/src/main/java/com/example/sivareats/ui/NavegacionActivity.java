@@ -18,6 +18,7 @@ import com.google.android.material.navigation.NavigationBarView;
 public class NavegacionActivity extends AppCompatActivity {
 
     private BottomNavigationView bottomNavigationView;
+    private Fragment activeFragment;
     private UserType currentUserType = UserType.USUARIO_NORMAL; // Cambiar según el usuario logueado
 
     @Override
@@ -136,8 +137,6 @@ public class NavegacionActivity extends AppCompatActivity {
             }
         });
     }
-
-    private Fragment activeFragment;
 
     private void loadFragment(Fragment fragment) {
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();

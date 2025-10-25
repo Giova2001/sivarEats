@@ -11,6 +11,7 @@ import androidx.fragment.app.Fragment;
 
 import com.example.sivareats.R;
 import com.example.sivareats.ui.profile.EditProfileActivity;
+import com.example.sivareats.ui.profile.UbicationActivity;
 
 public class ProfileFragment extends Fragment {
 
@@ -30,6 +31,16 @@ public class ProfileFragment extends Fragment {
             public void onClick(View v) {
                 // Abrir la nueva Activity
                 Intent intent = new Intent(getActivity(), EditProfileActivity.class);
+                startActivity(intent);
+            }
+        });
+
+        Button btnUbication = view.findViewById(R.id.btnUbicacion);
+        btnUbication.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Abrir la nueva Activity
+                Intent intent = new Intent(getActivity(), UbicationActivity.class);
                 startActivity(intent);
             }
         });
