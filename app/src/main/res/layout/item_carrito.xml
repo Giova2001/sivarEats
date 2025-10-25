@@ -66,12 +66,12 @@
                 android:backgroundTint="#E0E0E0"
                 android:insetTop="0dp"
                 android:textAlignment="center"
+                app:cornerRadius="18dp"
                 app:icon="@drawable/ic_remove"
                 app:iconGravity="textStart"
                 app:iconPadding="0dp"
                 app:iconSize="18dp"
-                app:iconTint="@color/black"
-                app:cornerRadius="18dp"  />
+                app:iconTint="@android:color/black" />
 
             <TextView
                 android:id="@+id/tvCantidad"
@@ -85,15 +85,15 @@
                 android:id="@+id/btnSumar"
                 android:layout_width="36dp"
                 android:layout_height="36dp"
-                android:backgroundTint="@color/ColorBotones"
+                android:backgroundTint="@color/info"
                 android:insetTop="0dp"
                 android:textAlignment="center"
+                app:cornerRadius="18dp"
                 app:icon="@drawable/ic_add"
                 app:iconGravity="textStart"
                 app:iconPadding="0dp"
                 app:iconSize="18dp"
-                app:iconTint="@color/white"
-                app:cornerRadius="18dp" />
+                app:iconTint="@color/white" />
 
         </LinearLayout>
     </LinearLayout>
