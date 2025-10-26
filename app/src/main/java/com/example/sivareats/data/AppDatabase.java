@@ -6,7 +6,11 @@ import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
 
-@Database(entities = {com.example.sivareats.data.User.class}, version = 1, exportSchema = false)
+@Database(
+        entities = { User.class },
+        version = 1,
+        exportSchema = false
+)
 public abstract class AppDatabase extends RoomDatabase {
 
     private static volatile AppDatabase INSTANCE;
@@ -17,8 +21,10 @@ public abstract class AppDatabase extends RoomDatabase {
         if (INSTANCE == null) {
             synchronized (AppDatabase.class) {
                 if (INSTANCE == null) {
-                    INSTANCE = Room.databaseBuilder(context.getApplicationContext(),
-                                    AppDatabase.class, "sivar_eats_db")
+                    INSTANCE = Room.databaseBuilder(
+                                    context.getApplicationContext(),
+                                    AppDatabase.class,
+                                    "sivareats.db")
                             .fallbackToDestructiveMigration()
                             .build();
                 }

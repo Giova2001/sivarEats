@@ -2,7 +2,7 @@ package com.example.sivareats.LOGIN;
 
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.util.Log;
+import android.util.Patterns;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -14,23 +14,40 @@ import com.example.sivareats.R;
 import com.example.sivareats.data.AppDatabase;
 import com.example.sivareats.data.User;
 import com.example.sivareats.data.UserDao;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.database.FirebaseDatabase;
+
+// ★ Firebase
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.SetOptions;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class LoginRegisterActivity extends AppCompatActivity {
 
     private EditText etName, etEmail, etPassword, etConfirmPassword;
     private Button btnRegister;
     private ImageButton btnBack;
-    private FirebaseAuth mAuth;
+
     private UserDao userDao;
+    private final ExecutorService ioExecutor = Executors.newSingleThreadExecutor();
+
+    // ★ Firestore
+    private FirebaseFirestore firestore;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login_register);
 
-        // Inicializar vistas
+        // Firebase (opcional pero seguro)
+        FirebaseApp.initializeApp(this);
+        firestore = FirebaseFirestore.getInstance();
+
+        // Vistas
         etName = findViewById(R.id.etName);
         etEmail = findViewById(R.id.etEmail);
         etPassword = findViewById(R.id.etPassword);
@@ -38,111 +55,161 @@ public class LoginRegisterActivity extends AppCompatActivity {
         btnRegister = findViewById(R.id.btnRegister);
         btnBack = findViewById(R.id.btnBack);
 
-        // Inicializar Firebase
-        mAuth = FirebaseAuth.getInstance();
-
-        // Inicializar Room DB
+        // Room
         AppDatabase db = AppDatabase.getInstance(this);
         userDao = db.userDao();
 
-        // Botón volver
+        // Volver
         btnBack.setOnClickListener(v -> finish());
 
-        // Botón registrar
-        btnRegister.setOnClickListener(v -> registerUser());
+        // Registrar (local + Firestore)
+        btnRegister.setOnClickListener(v -> registerUserLocal());
     }
 
-    private void registerUser() {
-        String name = etName.getText().toString().trim();
-        String email = etEmail.getText().toString().trim();
-        String password = etPassword.getText().toString().trim();
-        String confirmPassword = etConfirmPassword.getText().toString().trim();
+    private void registerUserLocal() {
+        // 1) Obtener datos
+        String name = safeText(etName);
+        String email = safeText(etEmail);
+        String password = safeText(etPassword);
+        String confirmPassword = safeText(etConfirmPassword);
 
-        if (TextUtils.isEmpty(name) || TextUtils.isEmpty(email) ||
-                TextUtils.isEmpty(password) || TextUtils.isEmpty(confirmPassword)) {
-            Toast.makeText(this, "Completa todos los campos", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        // 2) Validaciones
+        if (!validateName(name)) return;
+        if (!validateEmail(email)) return;
+        if (!validatePassword(password, confirmPassword)) return;
 
-        if (!password.equals(confirmPassword)) {
-            Toast.makeText(this, "Las contraseñas no coinciden", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        // 3) Operación en Room (hilo de I/O)
+        final String fName = name;
+        final String fEmail = email;
 
-        if (password.length() < 6) {
-            Toast.makeText(this, "La contraseña debe tener al menos 6 caracteres", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        // Registrar en Firebase Auth
-        mAuth.createUserWithEmailAndPassword(email, password)
-                .addOnCompleteListener(this, task -> {
-                    if (task.isSuccessful()) {
-                        String userId = mAuth.getCurrentUser().getUid();
-
-                        // Guardar datos del usuario en Firebase Database
-                        FirebaseDatabase.getInstance().getReference("users")
-                                .child(userId)
-                                .setValue(new User(name, email))
-                                .addOnCompleteListener(this, dbTask -> {
-                                    if (dbTask.isSuccessful()) {
-                                        // Guardar localmente en Room
-                                        saveUserLocal(name, email);
-
-                                        // ✅ Todo lo que afecta la UI se ejecuta en el hilo principal
-                                        runOnUiThread(() -> {
-                                            Toast.makeText(LoginRegisterActivity.this, "Registro exitoso", Toast.LENGTH_SHORT).show();
-                                            clearFields();
-
-                                            // Cerrar Activity tras 1.5 segundos
-                                            etName.postDelayed(() -> finish(), 1500);
-                                        });
-
-                                    } else {
-                                        runOnUiThread(() ->
-                                                Toast.makeText(LoginRegisterActivity.this, "Error al guardar en Firebase", Toast.LENGTH_SHORT).show()
-                                        );
-                                    }
-                                });
-                    } else {
-                        String errorMsg = "Error en el registro";
-                        if (task.getException() != null) {
-                            String error = task.getException().getMessage();
-                            if (error != null) {
-                                if (error.contains("email address is already in use")) {
-                                    errorMsg = "El correo ya está registrado";
-                                } else if (error.contains("badly formatted")) {
-                                    errorMsg = "Formato de email inválido";
-                                } else {
-                                    errorMsg = error;
-                                }
-                            }
-                        }
-                        Toast.makeText(LoginRegisterActivity.this, errorMsg, Toast.LENGTH_LONG).show();
-                    }
-                });
-    }
-
-    private void saveUserLocal(String name, String email) {
-        new Thread(() -> {
+        ioExecutor.execute(() -> {
             try {
-                userDao.insertUser(new User(name, email));
-                // Log para verificar que se guardó localmente
-                Log.d("LoginRegister", "Usuario guardado localmente: " + email);
+                boolean exists = userDao.existsByEmail(fEmail);
+                if (exists) {
+                    runOnUiThread(() -> {
+                        etEmail.setError("El correo ya está registrado");
+                        etEmail.requestFocus();
+                        toast("El correo ya está registrado");
+                    });
+                    return;
+                }
+
+                long id = userDao.insert(new User(fName, fEmail, password));
+
+                runOnUiThread(() -> {
+                    toast("Registro local exitoso (ID " + id + ")");
+
+                    // ★ Guardar también en Firebase (colección "users")
+                    saveUserToFirestore(fName, fEmail);
+
+                    clearFields();
+                    etName.postDelayed(this::finish, 900);
+                });
+
             } catch (Exception e) {
-                e.printStackTrace();
+                runOnUiThread(() -> toast("Error al guardar: " + e.getMessage()));
             }
-        }).start();
+        });
     }
 
-    // ✅ Función para limpiar los campos
+    // ===========================
+    // ★ Guardar en Firestore
+    // ===========================
+    /**
+     * Guarda/actualiza el usuario en la colección "users" usando el email como ID de documento.
+     * Si más adelante usas Firebase Auth, puedes cambiar el docId por el UID del usuario.
+     */
+    private void saveUserToFirestore(String name, String email) {
+        if (firestore == null) {
+            toast("Firestore no inicializado");
+            return;
+        }
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("name", name);
+        data.put("email", email);
+        data.put("createdAt", FieldValue.serverTimestamp());
+
+        // Usamos el email como ID de documento para evitar duplicados.
+        firestore.collection("users")
+                .document(email) // si luego usas Auth: .document(firebaseUser.getUid())
+                .set(data, SetOptions.merge())
+                .addOnSuccessListener(unused -> toast("Guardado en Firebase"))
+                .addOnFailureListener(e -> toast("No se pudo guardar en Firebase: " + e.getMessage()));
+    }
+
+    // --------------------
+    // Validaciones
+    // --------------------
+    private boolean validateName(String name) {
+        if (TextUtils.isEmpty(name)) {
+            etName.setError("Ingresa tu nombre");
+            etName.requestFocus();
+            toast("Completa todos los campos");
+            return false;
+        }
+        if (name.length() < 2) {
+            etName.setError("Nombre demasiado corto");
+            etName.requestFocus();
+            toast("El nombre debe tener al menos 2 caracteres");
+            return false;
+        }
+        return true;
+    }
+
+    private boolean validateEmail(String email) {
+        if (TextUtils.isEmpty(email)) {
+            etEmail.setError("Ingresa tu correo");
+            etEmail.requestFocus();
+            toast("Completa todos los campos");
+            return false;
+        }
+        if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            etEmail.setError("Formato de correo inválido");
+            etEmail.requestFocus();
+            toast("Formato de email inválido");
+            return false;
+        }
+        return true;
+    }
+
+    private boolean validatePassword(String password, String confirmPassword) {
+        if (TextUtils.isEmpty(password) || TextUtils.isEmpty(confirmPassword)) {
+            if (TextUtils.isEmpty(password)) etPassword.setError("Ingresa una contraseña");
+            if (TextUtils.isEmpty(confirmPassword)) etConfirmPassword.setError("Confirma tu contraseña");
+            toast("Completa todos los campos");
+            return false;
+        }
+        if (password.length() < 6) {
+            etPassword.setError("Mínimo 6 caracteres");
+            etPassword.requestFocus();
+            toast("La contraseña debe tener al menos 6 caracteres");
+            return false;
+        }
+        if (!password.equals(confirmPassword)) {
+            etConfirmPassword.setError("No coincide con la contraseña");
+            etConfirmPassword.requestFocus();
+            toast("Las contraseñas no coinciden");
+            return false;
+        }
+        return true;
+    }
+
+    // --------------------
+    // Utilidades
+    // --------------------
+    private String safeText(EditText et) {
+        return et.getText() == null ? "" : et.getText().toString().trim();
+    }
+
     private void clearFields() {
-        runOnUiThread(() -> {
-            etName.setText("");
-            etEmail.setText("");
-            etPassword.setText("");
-            etConfirmPassword.setText("");
-            Log.d("LoginRegister", "Campos limpiados correctamente");
-        });
+        etName.setText("");
+        etEmail.setText("");
+        etPassword.setText("");
+        etConfirmPassword.setText("");
+    }
+
+    private void toast(String msg) {
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
     }
 }

@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.text.TextUtils;
+import android.util.Patterns;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
@@ -14,11 +16,11 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.sivareats.R;
 import com.example.sivareats.data.AppDatabase;
-import com.example.sivareats.data.User;
 import com.example.sivareats.data.UserDao;
 import com.example.sivareats.ui.NavegacionActivity;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -27,86 +29,99 @@ public class LoginActivity extends AppCompatActivity {
     private SharedPreferences sharedPreferences;
     private static final String PREF_NAME = "loginPrefs";
 
-    private FirebaseAuth mAuth;
     private UserDao userDao;
+    private final ExecutorService ioExecutor = Executors.newSingleThreadExecutor();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
+        // Vistas
         etEmail = findViewById(R.id.etEmail);
         etPassword = findViewById(R.id.etPassword);
         checkBox = findViewById(R.id.checkBox);
         Button btnLogin = findViewById(R.id.btnLogin);
-        TextView tvRegistrate = findViewById(R.id.tvRegistrate);// Botón para ir a registro
+        TextView tvRegistrate = findViewById(R.id.tvRegistrate);
 
-        // Inicializar Firebase
-        mAuth = FirebaseAuth.getInstance();
-
-        // Inicializar Room DB
+        // Room
         AppDatabase db = AppDatabase.getInstance(this);
         userDao = db.userDao();
 
-        // Inicializar SharedPreferences
+        // SharedPreferences
         sharedPreferences = getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-
-        // Cargar sesión si existe
         loadLoginData();
 
-        // Login con Firebase
-        btnLogin.setOnClickListener(v -> loginUser());
+        // Login local
+        btnLogin.setOnClickListener(v -> loginUserLocal());
 
-        // Ir a pantalla de registro
+        // Ir a registro
         tvRegistrate.setOnClickListener(v -> {
             Intent intent = new Intent(LoginActivity.this, LoginRegisterActivity.class);
             startActivity(intent);
         });
     }
 
-    private void loginUser() {
-        String email = etEmail.getText().toString().trim();
-        String password = etPassword.getText().toString().trim();
+    private void loginUserLocal() {
+        String email = safeText(etEmail);
+        String password = safeText(etPassword);
 
-        if (email.isEmpty() || password.isEmpty()) {
-            Toast.makeText(this, "Completa todos los campos", Toast.LENGTH_SHORT).show();
+        // Validaciones UI
+        if (TextUtils.isEmpty(email)) {
+            etEmail.setError("Ingresa tu correo");
+            etEmail.requestFocus();
+            toast("Completa todos los campos");
+            return;
+        }
+        if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            etEmail.setError("Formato de correo inválido");
+            etEmail.requestFocus();
+            toast("Formato de email inválido");
+            return;
+        }
+        if (TextUtils.isEmpty(password)) {
+            etPassword.setError("Ingresa tu contraseña");
+            etPassword.requestFocus();
+            toast("Completa todos los campos");
             return;
         }
 
-        // Deshabilitar botón mientras se procesa (opcional)
         findViewById(R.id.btnLogin).setEnabled(false);
 
-        mAuth.signInWithEmailAndPassword(email, password)
-                .addOnCompleteListener(this, task -> {
-                    findViewById(R.id.btnLogin).setEnabled(true);
+        // Validación en BD local (Room)
+        ioExecutor.execute(() -> {
+            boolean ok = false;
+            try {
+                ok = userDao.validateLogin(email, password);
+            } catch (Exception ignored) {}
 
-                    if (task.isSuccessful()) {
-                        FirebaseUser user = mAuth.getCurrentUser();
-                        if (user != null) {
-                            // Guardar en SQLite local si quieres
-                            saveUserLocal(email);
-
-                            // Guardar sesión si está marcado
-                            if (checkBox.isChecked()) {
-                                saveLoginData(email);
-                            } else {
-                                clearLoginData();
-                            }
-
-                            Toast.makeText(LoginActivity.this, "Inicio de sesión exitoso", Toast.LENGTH_SHORT).show();
-                            goToMainScreen();
-                        }
+            boolean finalOk = ok;
+            runOnUiThread(() -> {
+                findViewById(R.id.btnLogin).setEnabled(true);
+                if (finalOk) {
+                    if (checkBox.isChecked()) {
+                        saveLoginData(email);
                     } else {
-                        String errorMsg = "Error al iniciar sesión";
-                        if (task.getException() != null && task.getException().getMessage() != null) {
-                            errorMsg = task.getException().getMessage();
-                        }
-                        Toast.makeText(LoginActivity.this, errorMsg, Toast.LENGTH_LONG).show();
+                        clearLoginData();
                     }
-                });
+                    toast("Inicio de sesión exitoso (local)");
+                    goToMainScreen();
+                } else {
+                    toast("Correo o contraseña inválidos");
+                }
+            });
+        });
     }
 
-    // Guardar solo email en SharedPreferences
+    // Utils
+    private String safeText(EditText et) {
+        return et.getText() == null ? "" : et.getText().toString().trim();
+    }
+
+    private void toast(String msg) {
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+    }
+
     private void saveLoginData(String email) {
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.putString("email", email);
@@ -126,17 +141,6 @@ public class LoginActivity extends AppCompatActivity {
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.clear();
         editor.apply();
-    }
-
-    // Guardar en SQLite/Room (local)
-    private void saveUserLocal(String email) {
-        new Thread(() -> {
-            try {
-                userDao.insertUser(new User(email));
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }).start();
     }
 
     private void goToMainScreen() {

@@ -2,18 +2,21 @@ package com.example.sivareats.data;
 
 import androidx.room.Dao;
 import androidx.room.Insert;
+import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
-
-import java.util.List;
 
 @Dao
 public interface UserDao {
 
-    // Insertar un usuario
-    @Insert
-    void insertUser(User user);
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    long insert(User user); // Falla si el email ya existe (por índice único)
 
-    // Obtener todos los usuarios
-    @Query("SELECT * FROM usuarios")
-    List<User> getAllUsers();
+    @Query("SELECT * FROM users WHERE email = :email LIMIT 1")
+   User findByEmail(String email);
+
+    @Query("SELECT EXISTS(SELECT 1 FROM users WHERE email = :email)")
+    boolean existsByEmail(String email);
+
+    @Query("SELECT EXISTS(SELECT 1 FROM users WHERE email = :email AND password = :password)")
+    boolean validateLogin(String email, String password);
 }
