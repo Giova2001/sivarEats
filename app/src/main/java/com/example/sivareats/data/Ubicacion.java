@@ -2,6 +2,9 @@ package com.example.sivareats.data;
 
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
+
+import com.google.firebase.firestore.GeoPoint;
+
 import java.io.Serializable;
 
 @Entity(tableName = "ubicaciones")
@@ -16,6 +19,17 @@ public class Ubicacion implements Serializable {
     private String descripcion;
     private String nombreLugar;
     private boolean preferida;
+
+    private String coordenadas;
+
+    public String getCoordenadas() {
+        return coordenadas;
+    }
+
+    public void setCoordenadas(String coordenadas) {
+        this.coordenadas = coordenadas;
+    }
+
 
     // Constructor vacío (Room puede usarlo)
     public Ubicacion() {}
