@@ -5,6 +5,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -30,13 +31,24 @@ public class HomeFragment extends Fragment {
         try {
             View view = inflater.inflate(R.layout.fragment_home, container, false);
 
+            // Referencias principales
             LinearLayout layoutOfertas = view.findViewById(R.id.layoutOfertas);
             LinearLayout layoutRecomendados = view.findViewById(R.id.layoutRecomendados);
+            LinearLayout layoutBusqueda = view.findViewById(R.id.layoutBusqueda);
+            View layoutPrincipal = view.findViewById(R.id.layoutPrincipalHome);
+            EditText barraBusqueda = view.findViewById(R.id.etBuscar);
 
-            // Limpia por si acaso (evita duplicados si el fragment se recrea)
+            // Mostrar/Ocultar búsqueda
+            barraBusqueda.setOnClickListener(v -> {
+                layoutBusqueda.setVisibility(View.VISIBLE);
+                layoutPrincipal.setVisibility(View.GONE);
+            });
+
+            // Limpia duplicados si el fragment se recrea
             if (layoutOfertas != null) layoutOfertas.removeAllViews();
             if (layoutRecomendados != null) layoutRecomendados.removeAllViews();
 
+            // Cargar productos
             List<Producto> ofertas = obtenerOfertas();
             List<Producto> recomendados = obtenerRecomendados();
 
@@ -45,13 +57,10 @@ public class HomeFragment extends Fragment {
 
             return view;
         } catch (Exception e) {
-            // Si algo falla en inflate o en tiempo de ejecución, logueamos y mostramos un Toast
             Log.e(TAG, "Error en onCreateView: ", e);
-            // Intentamos notificar al usuario (evita crash silencioso)
             if (getContext() != null) {
                 Toast.makeText(getContext(), "Error al cargar Home: " + e.getMessage(), Toast.LENGTH_LONG).show();
             }
-            // para evitar que devuelva null (mejor devolver un layout vacío seguro)
             return new View(requireContext());
         }
     }
@@ -99,3 +108,4 @@ public class HomeFragment extends Fragment {
         }
     }
 }
+

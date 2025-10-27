@@ -18,11 +18,9 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.SivarEats">
+
         <activity
             android:name=".ui.profile.LocationEditActivity"
-            android:exported="false" />
-        <activity
-            android:name=".ui.profile.LocationItemActivity"
             android:exported="false" />
         <activity
             android:name=".ui.profile.UbicationActivity"
