@@ -1,8 +1,11 @@
 package com.example.sivareats.ui.profile;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultLauncher;
@@ -18,6 +21,7 @@ import com.example.sivareats.data.Ubicacion;
 import com.example.sivareats.viewmodel.UbicacionViewModel;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 
@@ -64,7 +68,27 @@ public class UbicationActivity extends AppCompatActivity {
 
             @Override
             public void onDelete(Ubicacion u) {
-                viewModel.eliminar(u); // borra local; si quieres borrar en Firestore necesitas id remoto
+                // 1️⃣ Eliminar localmente en Room
+                viewModel.eliminar(u);
+
+                // 2️⃣ Eliminar remotamente en Firebase Firestore
+                if (u.getIdRemoto() != null && !u.getIdRemoto().isEmpty()) {
+                    FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+                    db.collection("ubicaciones")
+                            .document(u.getIdRemoto()) // ✅ usa el ID remoto
+                            .delete()
+                            .addOnSuccessListener(aVoid -> {
+                                Log.d("Firestore", "Ubicación eliminada correctamente de Firestore");
+                                Toast.makeText(UbicationActivity.this, "Ubicación eliminada de Firestore", Toast.LENGTH_SHORT).show();
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e("Firestore", "Error al eliminar en Firestore", e);
+                                Toast.makeText(UbicationActivity.this, "Error al eliminar en Firestore", Toast.LENGTH_SHORT).show();
+                            });
+                } else {
+                    Log.w("Firestore", "No se encontró idRemoto para eliminar en Firestore");
+                }
             }
 
             @Override

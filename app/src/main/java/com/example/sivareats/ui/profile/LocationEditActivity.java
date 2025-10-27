@@ -1,11 +1,11 @@
 package com.example.sivareats.ui.profile;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -32,6 +32,8 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
 
 public class LocationEditActivity extends AppCompatActivity implements OnMapReadyCallback {
@@ -48,6 +50,7 @@ public class LocationEditActivity extends AppCompatActivity implements OnMapRead
     private double currentLng = 0.0;
 
     private static final int LOCATION_PERMISSION_REQUEST = 1001;
+    private FirebaseFirestore db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,10 +58,11 @@ public class LocationEditActivity extends AppCompatActivity implements OnMapRead
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_location_edit);
 
-        // Inicializar ViewModel
+        // ViewModel y Firestore
         viewModel = new ViewModelProvider(this).get(UbicacionViewModel.class);
+        db = FirebaseFirestore.getInstance();
 
-        // Configurar toolbar
+        // Toolbar
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         toolbar.setNavigationOnClickListener(v -> onBackPressed());
@@ -71,7 +75,7 @@ public class LocationEditActivity extends AppCompatActivity implements OnMapRead
         etDepto = findViewById(R.id.etDepto);
         btnGuardar = findViewById(R.id.btnGuardar);
 
-        // Configurar mapa
+        // Mapa
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         if (mapFragment != null) mapFragment.getMapAsync(this);
@@ -82,24 +86,28 @@ public class LocationEditActivity extends AppCompatActivity implements OnMapRead
             return insets;
         });
 
-        // Inicializar cliente de ubicación
+        // Cliente de ubicación
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
-        // Ver si viene en modo edición
+        // Revisar si estamos editando
         if (getIntent() != null && getIntent().hasExtra("ubicacion_obj")) {
             Object obj = getIntent().getSerializableExtra("ubicacion_obj");
             if (obj instanceof Ubicacion) {
                 ubicacionEditing = (Ubicacion) obj;
                 isEditing = true;
-                etNombreLugar.setText(ubicacionEditing.getNombreLugar());
-                etDireccion.setText(ubicacionEditing.getDireccion());
-                etTipo.setText(ubicacionEditing.getTipo());
-                etDescripcion.setText(ubicacionEditing.getDescripcion());
-                etDepto.setText(ubicacionEditing.getDepto());
+                cargarDatosExistentes();
             }
         }
 
         btnGuardar.setOnClickListener(v -> guardarYSalir());
+    }
+
+    private void cargarDatosExistentes() {
+        etNombreLugar.setText(ubicacionEditing.getNombreLugar());
+        etDireccion.setText(ubicacionEditing.getDireccion());
+        etTipo.setText(ubicacionEditing.getTipo());
+        etDescripcion.setText(ubicacionEditing.getDescripcion());
+        etDepto.setText(ubicacionEditing.getDepto());
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -134,7 +142,7 @@ public class LocationEditActivity extends AppCompatActivity implements OnMapRead
     }
 
     // ---------------------------------------------------------------------------------------------
-    // GUARDAR EN FIREBASE
+    // GUARDAR / ACTUALIZAR EN FIREBASE + ROOM
     // ---------------------------------------------------------------------------------------------
     private void guardarYSalir() {
         String nombre = etNombreLugar.getText() != null ? etNombreLugar.getText().toString().trim() : "";
@@ -149,26 +157,54 @@ public class LocationEditActivity extends AppCompatActivity implements OnMapRead
         }
 
         GeoPoint geoPoint = new GeoPoint(currentLat, currentLng);
-        String geoText = geoPointToString(geoPoint); // 🔹 Conversión aquí
+        String geoText = geoPointToString(geoPoint);
 
         if (isEditing && ubicacionEditing != null) {
+            // 🔹 ACTUALIZAR
             ubicacionEditing.setNombreLugar(nombre);
             ubicacionEditing.setDireccion(direccion);
             ubicacionEditing.setTipo(tipo);
             ubicacionEditing.setDescripcion(descripcion);
             ubicacionEditing.setDepto(depto);
-            ubicacionEditing.setCoordenadas(geoText); // ⚠️ Guarda el texto, no el GeoPoint
-            viewModel.actualizar(ubicacionEditing);
+            ubicacionEditing.setCoordenadas(geoText);
+
+            if (ubicacionEditing.getIdRemoto() != null) {
+                db.collection("ubicaciones")
+                        .document(ubicacionEditing.getIdRemoto())
+                        .set(ubicacionEditing)
+                        .addOnSuccessListener(aVoid -> {
+                            viewModel.actualizar(ubicacionEditing);
+                            Toast.makeText(this, "Ubicación actualizada correctamente", Toast.LENGTH_SHORT).show();
+                            setResult(RESULT_OK);
+                            finish();
+                        })
+                        .addOnFailureListener(e -> {
+                            Log.e("Firestore", "Error al actualizar", e);
+                            Toast.makeText(this, "Error al actualizar en Firestore", Toast.LENGTH_SHORT).show();
+                        });
+            }
+
         } else {
+            // 🔹 CREAR NUEVA
             Ubicacion nueva = new Ubicacion(nombre, direccion, tipo, depto, descripcion, false);
-            nueva.setCoordenadas(geoText); // ⚠️ Guarda el texto
-            viewModel.insertar(nueva);
+            nueva.setCoordenadas(geoText);
+
+            DocumentReference ref = db.collection("ubicaciones").document();
+            nueva.setIdRemoto(ref.getId());
+
+            ref.set(nueva)
+                    .addOnSuccessListener(aVoid -> {
+                        viewModel.insertar(nueva);
+                        Toast.makeText(this, "Ubicación guardada correctamente", Toast.LENGTH_SHORT).show();
+                        setResult(RESULT_OK);
+                        finish();
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e("Firestore", "Error al guardar", e);
+                        Toast.makeText(this, "Error al guardar en Firestore", Toast.LENGTH_SHORT).show();
+                    });
         }
-
-        setResult(RESULT_OK);
-        finish();
     }
-
 
     // ---------------------------------------------------------------------------------------------
     // CALLBACK DEL MAPA
@@ -178,8 +214,6 @@ public class LocationEditActivity extends AppCompatActivity implements OnMapRead
         mMap = googleMap;
         mMap.getUiSettings().setZoomControlsEnabled(true);
         mMap.getUiSettings().setMyLocationButtonEnabled(true);
-
-        // Llama a la función que obtiene la ubicación actual
         obtenerUbicacionActual();
     }
 
@@ -198,9 +232,11 @@ public class LocationEditActivity extends AppCompatActivity implements OnMapRead
         }
     }
 
+    // ---------------------------------------------------------------------------------------------
+    // CONVERTIR GEOPOINT A TEXTO
+    // ---------------------------------------------------------------------------------------------
     private String geoPointToString(GeoPoint geoPoint) {
         if (geoPoint == null) return "";
         return geoPoint.getLatitude() + "," + geoPoint.getLongitude();
     }
-
 }
