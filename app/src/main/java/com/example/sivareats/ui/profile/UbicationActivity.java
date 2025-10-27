@@ -2,13 +2,11 @@ package com.example.sivareats.ui.profile;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.TextView;
 
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -37,14 +35,14 @@ public class UbicationActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ubication);
 
-        // views
+        // Views
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         rvPreferred = findViewById(R.id.rvPreferred);
         rvMine = findViewById(R.id.rvMine);
         tvEmpty = findViewById(R.id.tvEmpty);
         fabAddLocation = findViewById(R.id.fabAddLocation);
 
-        // toolbar back (si la usas)
+        // Toolbar back
         toolbar.setNavigationOnClickListener(v -> onBackPressed());
 
         // ViewModel
@@ -54,11 +52,11 @@ public class UbicationActivity extends AppCompatActivity {
         rvPreferred.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         rvMine.setLayoutManager(new LinearLayoutManager(this));
 
-        // Adapter listeners
+        // Adapter listener
         UbicationAdapter.OnItemClickListener listenerForMine = new UbicationAdapter.OnItemClickListener() {
             @Override
             public void onEdit(Ubicacion u) {
-                // lanzar editor con objeto
+                // Lanzar editor con objeto
                 Intent i = new Intent(UbicationActivity.this, LocationEditActivity.class);
                 i.putExtra("ubicacion_obj", u); // serializable
                 locationLauncher.launch(i);
@@ -71,11 +69,11 @@ public class UbicationActivity extends AppCompatActivity {
 
             @Override
             public void onClick(Ubicacion u) {
-                // evento click item (si quieres marcar favorita o seleccionar)
+                // Evento click item (si quieres marcar favorita o seleccionar)
             }
         };
 
-        // Para preferidas normalmente no editamos desde el carrusel, por eso null listener is ok
+        // Adapters
         adapterPreferred = new UbicationAdapter(new ArrayList<>(), this, listenerForMine);
         adapterMine = new UbicationAdapter(new ArrayList<>(), this, listenerForMine);
 
@@ -87,15 +85,15 @@ public class UbicationActivity extends AppCompatActivity {
                 new ActivityResultContracts.StartActivityForResult(),
                 (ActivityResult result) -> {
                     if (result.getResultCode() == RESULT_OK) {
-                        // LiveData actualizará automáticamente; si quieres forzar recarga, no hace falta
-                        // pero puedes mostrar toast o scroll to top
+                        // LiveData actualizará automáticamente; puedes mostrar toast o scroll si deseas
                     }
-                });
+                }
+        );
 
         // Observa LiveData
         viewModel.obtenerTodas().observe(this, ubicaciones -> {
             if (ubicaciones != null && !ubicaciones.isEmpty()) {
-                tvEmpty.setVisibility(View.GONE);
+                tvEmpty.setVisibility(TextView.GONE);
                 adapterMine.setUbicaciones(ubicaciones);
 
                 if (ubicaciones.size() >= 2) {
@@ -104,7 +102,7 @@ public class UbicationActivity extends AppCompatActivity {
                     adapterPreferred.setUbicaciones(ubicaciones);
                 }
             } else {
-                tvEmpty.setVisibility(View.VISIBLE);
+                tvEmpty.setVisibility(TextView.VISIBLE);
                 adapterMine.setUbicaciones(new ArrayList<>());
                 adapterPreferred.setUbicaciones(new ArrayList<>());
             }
@@ -113,7 +111,6 @@ public class UbicationActivity extends AppCompatActivity {
         // FAB: crear nueva ubicación
         fabAddLocation.setOnClickListener(v -> {
             Intent i = new Intent(UbicationActivity.this, LocationEditActivity.class);
-            // No extras -> creación nueva
             locationLauncher.launch(i);
         });
     }
