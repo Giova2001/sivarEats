@@ -59,6 +59,7 @@ dependencies {
     implementation("androidx.compose.material3:material3-window-size-class:1.3.0")
     implementation("androidx.compose.material3:material3-adaptive-navigation-suite:1.3.0")
     implementation(libs.play.services.maps)
+    implementation(libs.play.services.location)
     debugImplementation(libs.ui.tooling)
     debugImplementation(libs.ui.test.manifest)
 

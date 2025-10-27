@@ -180,10 +180,10 @@ public class LoginRegisterActivity extends AppCompatActivity {
             toast("Completa todos los campos");
             return false;
         }
-        if (password.length() < 6) {
-            etPassword.setError("Mínimo 6 caracteres");
+        if (password.length() < 8) {
+            etPassword.setError("Mínimo 8 caracteres");
             etPassword.requestFocus();
-            toast("La contraseña debe tener al menos 6 caracteres");
+            toast("La contraseña debe tener al menos 8 caracteres");
             return false;
         }
         if (!password.equals(confirmPassword)) {

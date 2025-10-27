@@ -19,7 +19,8 @@
             android:layout_height="?attr/actionBarSize"
             app:title="Ubicación"
             app:titleCentered="true"
-            app:navigationIcon="?attr/homeAsUpIndicator"/>
+            app:navigationIcon="@drawable/ic_return"/>
+
     </com.google.android.material.appbar.AppBarLayout>
 
     <!-- Contenido -->
@@ -38,6 +39,12 @@
             android:layout_height="wrap_content">
 
             <!-- Buscador -->
+
+            <Button
+                android:id="@+id/irAEditLocation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Agregar mi ubicacion actual" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -69,6 +76,7 @@
             </LinearLayout>
 
             <!-- Espacio pequeño como en el mock -->
+
             <Space
                 android:layout_width="match_parent"
                 android:layout_height="8dp"/>

@@ -30,7 +30,7 @@
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyAbRfYiATzpAsZ-z1cc4vRqcI0yL4M3Hmg" />
+            android:value="AIzaSyDBf9_VgURZetYqAqf_V-CuB8r8qOB5bvI" />
 
         <activity
             android:name=".ui.profile.EditProfileActivity"

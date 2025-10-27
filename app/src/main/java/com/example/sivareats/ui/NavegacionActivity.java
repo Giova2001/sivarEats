@@ -139,19 +139,28 @@ public class NavegacionActivity extends AppCompatActivity {
     }
 
     private void loadFragment(Fragment fragment) {
+        String fragmentTag = fragment.getClass().getSimpleName();
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
 
-        if (activeFragment != null) {
-            transaction.hide(activeFragment);
-        }
+        // Buscar si el fragment ya existe
+        Fragment existingFragment = getSupportFragmentManager().findFragmentByTag(fragmentTag);
 
-        if (getSupportFragmentManager().findFragmentByTag(fragment.getClass().getSimpleName()) == null) {
-            transaction.add(R.id.fragment_container, fragment, fragment.getClass().getSimpleName());
+        if (existingFragment != null) {
+            // Si existe, mostrarlo
+            if (activeFragment != null) {
+                transaction.hide(activeFragment);
+            }
+            transaction.show(existingFragment);
+            activeFragment = existingFragment;
         } else {
-            transaction.show(fragment);
+            // Si no existe, añadirlo
+            if (activeFragment != null) {
+                transaction.hide(activeFragment);
+            }
+            transaction.add(R.id.fragment_container, fragment, fragmentTag);
+            activeFragment = fragment;
         }
 
-        activeFragment = fragment;
         transaction.commit();
     }
 
