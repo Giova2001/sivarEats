@@ -3,34 +3,118 @@ package com.example.sivareats.ui.profile;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.Button;
+import android.widget.TextView;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.sivareats.R;
+import com.example.sivareats.adapters.UbicationAdapter;
+import com.example.sivareats.data.Ubicacion;
+import com.example.sivareats.viewmodel.UbicacionViewModel;
+import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
+import java.util.ArrayList;
 
 public class UbicationActivity extends AppCompatActivity {
+
+    private UbicacionViewModel viewModel;
+    private RecyclerView rvPreferred, rvMine;
+    private TextView tvEmpty;
+    private UbicationAdapter adapterPreferred, adapterMine;
+    private FloatingActionButton fabAddLocation;
+    private ActivityResultLauncher<Intent> locationLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ubication);
 
-        // Referencia correcta del botón
-        Button btnEditUbication = findViewById(R.id.irAEditLocation);
+        // views
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        rvPreferred = findViewById(R.id.rvPreferred);
+        rvMine = findViewById(R.id.rvMine);
+        tvEmpty = findViewById(R.id.tvEmpty);
+        fabAddLocation = findViewById(R.id.fabAddLocation);
 
-        // Acción al presionar el botón
-        btnEditUbication.setOnClickListener(v -> {
-            Intent intent = new Intent(UbicationActivity.this, LocationEditActivity.class);
-            startActivity(intent);
+        // toolbar back (si la usas)
+        toolbar.setNavigationOnClickListener(v -> onBackPressed());
+
+        // ViewModel
+        viewModel = new ViewModelProvider(this).get(UbicacionViewModel.class);
+
+        // RecyclerViews setup
+        rvPreferred.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        rvMine.setLayoutManager(new LinearLayoutManager(this));
+
+        // Adapter listeners
+        UbicationAdapter.OnItemClickListener listenerForMine = new UbicationAdapter.OnItemClickListener() {
+            @Override
+            public void onEdit(Ubicacion u) {
+                // lanzar editor con objeto
+                Intent i = new Intent(UbicationActivity.this, LocationEditActivity.class);
+                i.putExtra("ubicacion_obj", u); // serializable
+                locationLauncher.launch(i);
+            }
+
+            @Override
+            public void onDelete(Ubicacion u) {
+                viewModel.eliminar(u); // borra local; si quieres borrar en Firestore necesitas id remoto
+            }
+
+            @Override
+            public void onClick(Ubicacion u) {
+                // evento click item (si quieres marcar favorita o seleccionar)
+            }
+        };
+
+        // Para preferidas normalmente no editamos desde el carrusel, por eso null listener is ok
+        adapterPreferred = new UbicationAdapter(new ArrayList<>(), this, listenerForMine);
+        adapterMine = new UbicationAdapter(new ArrayList<>(), this, listenerForMine);
+
+        rvPreferred.setAdapter(adapterPreferred);
+        rvMine.setAdapter(adapterMine);
+
+        // Launcher para recibir resultado de creación/edición
+        locationLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                (ActivityResult result) -> {
+                    if (result.getResultCode() == RESULT_OK) {
+                        // LiveData actualizará automáticamente; si quieres forzar recarga, no hace falta
+                        // pero puedes mostrar toast o scroll to top
+                    }
+                });
+
+        // Observa LiveData
+        viewModel.obtenerTodas().observe(this, ubicaciones -> {
+            if (ubicaciones != null && !ubicaciones.isEmpty()) {
+                tvEmpty.setVisibility(View.GONE);
+                adapterMine.setUbicaciones(ubicaciones);
+
+                if (ubicaciones.size() >= 2) {
+                    adapterPreferred.setUbicaciones(ubicaciones.subList(0, 2));
+                } else {
+                    adapterPreferred.setUbicaciones(ubicaciones);
+                }
+            } else {
+                tvEmpty.setVisibility(View.VISIBLE);
+                adapterMine.setUbicaciones(new ArrayList<>());
+                adapterPreferred.setUbicaciones(new ArrayList<>());
+            }
         });
 
-        // Configurar Toolbar (usa androidx.appcompat.widget.Toolbar, no android.widget.Toolbar)
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-
-        // Acción de navegación (flecha atrás)
-        toolbar.setNavigationOnClickListener(v -> onBackPressed());
+        // FAB: crear nueva ubicación
+        fabAddLocation.setOnClickListener(v -> {
+            Intent i = new Intent(UbicationActivity.this, LocationEditActivity.class);
+            // No extras -> creación nueva
+            locationLauncher.launch(i);
+        });
     }
 }
