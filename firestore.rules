@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Regla para la colección de usuarios
+    match /users/{userId} {
+      // Permitir lectura si el usuario está autenticado
+      allow read: if request.auth != null;
+      
+      // Permitir escritura solo si el usuario está autenticado
+      // y el documento corresponde al email del usuario autenticado
+      allow write: if request.auth != null 
+                   && (request.auth.token.email == userId 
+                       || request.resource.data.email == request.auth.token.email);
+      
+      // Permitir creación si el usuario está autenticado
+      allow create: if request.auth != null 
+                    && request.resource.data.email == request.auth.token.email;
+      
+      // Permitir actualización si el usuario está autenticado
+      // y el documento pertenece al usuario autenticado
+      allow update: if request.auth != null 
+                    && (resource.data.email == request.auth.token.email 
+                        || request.resource.data.email == request.auth.token.email);
+    }
+    
+    // Regla para otras colecciones (ubicaciones, etc.)
+    match /ubicaciones/{ubicacionId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+    
+    // Regla por defecto: denegar todo lo demás
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

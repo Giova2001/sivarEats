@@ -103,10 +103,28 @@ public class ProfileFragment extends Fragment {
 
         if (currentUser != null && currentUser.getEmail() != null) {
             userEmail = currentUser.getEmail();
+            // Guardar en SharedPreferences para uso en otras actividades
+            SharedPreferences.Editor editor = sharedPreferences.edit();
+            editor.putString("email", userEmail);
+            editor.putString("CURRENT_USER_EMAIL", userEmail);
+            editor.apply();
+            
+            // También guardar en SivarEatsPrefs
+            SharedPreferences sessionPrefs = requireContext().getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
+            sessionPrefs.edit().putString("CURRENT_USER_EMAIL", userEmail).apply();
         } else {
+            // Intentar obtener desde múltiples fuentes
             userEmail = sharedPreferences.getString("email", null);
             if (userEmail == null) {
+                userEmail = sharedPreferences.getString("CURRENT_USER_EMAIL", null);
+            }
+            if (userEmail == null) {
                 userEmail = sharedPreferences.getString("last_logged_email", null);
+            }
+            // También buscar en SivarEatsPrefs
+            if (userEmail == null) {
+                SharedPreferences sessionPrefs = requireContext().getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
+                userEmail = sessionPrefs.getString("CURRENT_USER_EMAIL", null);
             }
         }
 

@@ -35,4 +35,7 @@ public interface UserDao {
 
     @Query("UPDATE users SET rol = :rol WHERE email = :email")
     void updateRol(String email, String rol);
+
+    @Query("SELECT * FROM users ORDER BY id DESC LIMIT 1")
+    User findFirstUser();
 }

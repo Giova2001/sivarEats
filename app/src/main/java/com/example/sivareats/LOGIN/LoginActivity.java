@@ -18,6 +18,8 @@ import com.example.sivareats.R;
 import com.example.sivareats.data.AppDatabase;
 import com.example.sivareats.data.UserDao;
 import com.example.sivareats.ui.NavegacionActivity;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -31,11 +33,15 @@ public class LoginActivity extends AppCompatActivity {
 
     private UserDao userDao;
     private final ExecutorService ioExecutor = Executors.newSingleThreadExecutor();
+    private FirebaseAuth mAuth;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
+
+        // Firebase Auth
+        mAuth = FirebaseAuth.getInstance();
 
         // Vistas
         etEmail = findViewById(R.id.etEmail);
@@ -52,7 +58,7 @@ public class LoginActivity extends AppCompatActivity {
         sharedPreferences = getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
         loadLoginData();
 
-        // Login local
+        // Login local + Firebase Auth
         btnLogin.setOnClickListener(v -> loginUserLocal());
 
         // Ir a registro
@@ -88,7 +94,7 @@ public class LoginActivity extends AppCompatActivity {
 
         findViewById(R.id.btnLogin).setEnabled(false);
 
-        // Validación en BD local (Room)
+        // Primero validar en BD local (Room)
         ioExecutor.execute(() -> {
             boolean ok = false;
             try {
@@ -97,20 +103,79 @@ public class LoginActivity extends AppCompatActivity {
 
             boolean finalOk = ok;
             runOnUiThread(() -> {
-                findViewById(R.id.btnLogin).setEnabled(true);
                 if (finalOk) {
-                    if (checkBox.isChecked()) {
-                        saveLoginData(email);
-                    } else {
-                        clearLoginData();
-                    }
-                    toast("Inicio de sesión exitoso (local)");
-                    goToMainScreen();
+                    // Si la validación local es exitosa, autenticar con Firebase Auth
+                    authenticateWithFirebase(email, password);
                 } else {
+                    findViewById(R.id.btnLogin).setEnabled(true);
                     toast("Correo o contraseña inválidos");
                 }
             });
         });
+    }
+
+    private void authenticateWithFirebase(String email, String password) {
+        mAuth.signInWithEmailAndPassword(email, password)
+                .addOnCompleteListener(this, task -> {
+                    findViewById(R.id.btnLogin).setEnabled(true);
+                    if (task.isSuccessful()) {
+                        // Autenticación exitosa
+                        FirebaseUser user = mAuth.getCurrentUser();
+                        if (user != null) {
+                            // Guardar email en SharedPreferences (loginPrefs)
+                            if (checkBox.isChecked()) {
+                                saveLoginData(email);
+                            } else {
+                                // Aún guardar el email aunque no esté marcado "recordar"
+                                SharedPreferences.Editor editor = sharedPreferences.edit();
+                                editor.putString("email", email);
+                                editor.putBoolean("remember", false);
+                                editor.apply();
+                            }
+                            // También guardar en SivarEatsPrefs para uso en otras actividades
+                            SharedPreferences sessionPrefs = getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
+                            sessionPrefs.edit().putString("CURRENT_USER_EMAIL", email).apply();
+                            
+                            toast("Inicio de sesión exitoso");
+                            goToMainScreen();
+                        }
+                    } else {
+                        // Si no existe en Firebase Auth, crearlo
+                        createFirebaseUser(email, password);
+                    }
+                });
+    }
+
+    private void createFirebaseUser(String email, String password) {
+        mAuth.createUserWithEmailAndPassword(email, password)
+                .addOnCompleteListener(this, task -> {
+                    findViewById(R.id.btnLogin).setEnabled(true);
+                    if (task.isSuccessful()) {
+                        FirebaseUser user = mAuth.getCurrentUser();
+                        if (user != null) {
+                            // Guardar email en SharedPreferences (loginPrefs)
+                            if (checkBox.isChecked()) {
+                                saveLoginData(email);
+                            } else {
+                                // Aún guardar el email aunque no esté marcado "recordar"
+                                SharedPreferences.Editor editor = sharedPreferences.edit();
+                                editor.putString("email", email);
+                                editor.putBoolean("remember", false);
+                                editor.apply();
+                            }
+                            // También guardar en SivarEatsPrefs para uso en otras actividades
+                            SharedPreferences sessionPrefs = getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
+                            sessionPrefs.edit().putString("CURRENT_USER_EMAIL", email).apply();
+                            
+                            toast("Usuario creado y autenticado");
+                            goToMainScreen();
+                        }
+                    } else {
+                        String errorMsg = task.getException() != null ? 
+                                task.getException().getMessage() : "Error desconocido";
+                        toast("Error al autenticar: " + errorMsg);
+                    }
+                });
     }
 
     // Utils

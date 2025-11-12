@@ -108,14 +108,57 @@ public class EditProfileActivity extends AppCompatActivity {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser != null) {
             userEmail = currentUser.getEmail();
+            // Guardar en SharedPreferences para uso futuro
+            SharedPreferences sessionPrefs = getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
+            sessionPrefs.edit().putString("CURRENT_USER_EMAIL", userEmail).apply();
+            SharedPreferences loginPrefs = getSharedPreferences("loginPrefs", Context.MODE_PRIVATE);
+            loginPrefs.edit().putString("email", userEmail).apply();
         } else {
-            // Como fallback, intentar obtenerlo de SharedPreferences
+            // Como fallback, intentar obtenerlo de múltiples fuentes
             SharedPreferences sessionPrefs = getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
             userEmail = sessionPrefs.getString("CURRENT_USER_EMAIL", null);
+            
+            if (userEmail == null) {
+                SharedPreferences loginPrefs = getSharedPreferences("loginPrefs", Context.MODE_PRIVATE);
+                userEmail = loginPrefs.getString("email", null);
+            }
+            
+            // Si aún no se encuentra, intentar obtener desde Room (último usuario registrado)
+            if (userEmail == null) {
+                ioExecutor.execute(() -> {
+                    try {
+                        User lastUser = roomDb.userDao().findFirstUser();
+                        if (lastUser != null && lastUser.getEmail() != null) {
+                            String foundEmail = lastUser.getEmail();
+                            runOnUiThread(() -> {
+                                userEmail = foundEmail;
+                                // Guardar para uso futuro
+                                SharedPreferences sessionPrefs2 = getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
+                                sessionPrefs2.edit().putString("CURRENT_USER_EMAIL", userEmail).apply();
+                                SharedPreferences loginPrefs2 = getSharedPreferences("loginPrefs", Context.MODE_PRIVATE);
+                                loginPrefs2.edit().putString("email", userEmail).apply();
+                                // Continuar con la carga del perfil
+                                loadUserProfile();
+                            });
+                        } else {
+                            runOnUiThread(() -> {
+                                Toast.makeText(this, "Error: Usuario no identificado. Por favor, inicia sesión nuevamente.", Toast.LENGTH_LONG).show();
+                                finish();
+                            });
+                        }
+                    } catch (Exception e) {
+                        runOnUiThread(() -> {
+                            Toast.makeText(this, "Error: Usuario no identificado. Por favor, inicia sesión nuevamente.", Toast.LENGTH_LONG).show();
+                            finish();
+                        });
+                    }
+                });
+                return; // Salir aquí, loadUserProfile se llamará desde el hilo si encuentra usuario
+            }
         }
 
         if (userEmail == null || userEmail.isEmpty()) {
-            Toast.makeText(this, "Error: Usuario no identificado.", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Error: Usuario no identificado. Por favor, inicia sesión nuevamente.", Toast.LENGTH_LONG).show();
             finish();
         }
     }
@@ -235,6 +278,14 @@ public class EditProfileActivity extends AppCompatActivity {
 
         btnSave.setEnabled(false);
 
+        // Verificar que el usuario esté autenticado antes de actualizar
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser == null) {
+            Toast.makeText(this, "Error: Sesión expirada. Por favor, inicia sesión nuevamente.", Toast.LENGTH_LONG).show();
+            btnSave.setEnabled(true);
+            return;
+        }
+
         // 1. Guardar en Firestore
         db.collection("users").document(userEmail)
                 .update(updates)
@@ -249,8 +300,31 @@ public class EditProfileActivity extends AppCompatActivity {
                     });
                 })
                 .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Error al actualizar el perfil: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    btnSave.setEnabled(true);
+                    String errorMsg = e.getMessage();
+                    // Si el error es de permisos, intentar con set en lugar de update
+                    if (errorMsg != null && (errorMsg.contains("permission") || errorMsg.contains("PERMISSION_DENIED"))) {
+                        // Intentar crear/actualizar con set
+                        Map<String, Object> fullData = new HashMap<>(updates);
+                        fullData.put("email", userEmail);
+                        db.collection("users").document(userEmail)
+                                .set(fullData, com.google.firebase.firestore.SetOptions.merge())
+                                .addOnSuccessListener(aVoid -> {
+                                    ioExecutor.execute(() -> {
+                                        roomDb.userDao().updateProfileDetails(userEmail, newName, newAlias, newPhone);
+                                        runOnUiThread(() -> {
+                                            Toast.makeText(this, "Perfil actualizado correctamente", Toast.LENGTH_SHORT).show();
+                                            finish();
+                                        });
+                                    });
+                                })
+                                .addOnFailureListener(e2 -> {
+                                    Toast.makeText(this, "Error al actualizar el perfil: " + e2.getMessage(), Toast.LENGTH_SHORT).show();
+                                    btnSave.setEnabled(true);
+                                });
+                    } else {
+                        Toast.makeText(this, "Error al actualizar el perfil: " + errorMsg, Toast.LENGTH_SHORT).show();
+                        btnSave.setEnabled(true);
+                    }
                 });
     }
 
@@ -291,13 +365,38 @@ public class EditProfileActivity extends AppCompatActivity {
     private void updateProfileImageUrl(String imageUrl) {
         if (userEmail == null) return;
 
+        // Verificar autenticación
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser == null) {
+            Toast.makeText(this, "Error: Sesión expirada", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         // Actualizar en Firestore
+        Map<String, Object> updateData = new HashMap<>();
+        updateData.put("profile_image_url", imageUrl);
+        
         db.collection("users").document(userEmail)
-                .update("profile_image_url", imageUrl)
+                .update(updateData)
                 .addOnSuccessListener(aVoid -> {
                     // Actualizar en Room
                     ioExecutor.execute(() -> roomDb.userDao().updateProfileUrl(userEmail, imageUrl));
                     Toast.makeText(this, "Foto de perfil actualizada", Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(e -> {
+                    // Si falla update, intentar con set
+                    Map<String, Object> fullData = new HashMap<>();
+                    fullData.put("email", userEmail);
+                    fullData.put("profile_image_url", imageUrl);
+                    db.collection("users").document(userEmail)
+                            .set(fullData, com.google.firebase.firestore.SetOptions.merge())
+                            .addOnSuccessListener(aVoid -> {
+                                ioExecutor.execute(() -> roomDb.userDao().updateProfileUrl(userEmail, imageUrl));
+                                Toast.makeText(this, "Foto de perfil actualizada", Toast.LENGTH_SHORT).show();
+                            })
+                            .addOnFailureListener(e2 -> {
+                                Toast.makeText(this, "Error al actualizar foto: " + e2.getMessage(), Toast.LENGTH_SHORT).show();
+                            });
                 });
     }
 

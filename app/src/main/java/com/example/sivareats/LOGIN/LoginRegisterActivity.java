@@ -17,6 +17,8 @@ import com.example.sivareats.data.UserDao;
 
 // ★ Firebase
 import com.google.firebase.FirebaseApp;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
@@ -35,8 +37,9 @@ public class LoginRegisterActivity extends AppCompatActivity {
     private UserDao userDao;
     private final ExecutorService ioExecutor = Executors.newSingleThreadExecutor();
 
-    // ★ Firestore
+    // ★ Firebase
     private FirebaseFirestore firestore;
+    private FirebaseAuth mAuth;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,6 +49,7 @@ public class LoginRegisterActivity extends AppCompatActivity {
         // Firebase (opcional pero seguro)
         FirebaseApp.initializeApp(this);
         firestore = FirebaseFirestore.getInstance();
+        mAuth = FirebaseAuth.getInstance();
 
         // Vistas
         etName = findViewById(R.id.etName);
@@ -99,11 +103,8 @@ public class LoginRegisterActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     toast("Registro local exitoso (ID " + id + ")");
 
-                    // ★ Guardar también en Firebase (colección "users")
-                    saveUserToFirestore(fName, fEmail);
-
-                    clearFields();
-                    etName.postDelayed(this::finish, 900);
+                    // ★ Crear usuario en Firebase Auth y luego guardar en Firestore
+                    createFirebaseUserAndSave(fName, fEmail, password);
                 });
 
             } catch (Exception e) {
@@ -113,11 +114,34 @@ public class LoginRegisterActivity extends AppCompatActivity {
     }
 
     // ===========================
-    // ★ Guardar en Firestore
+    // ★ Crear usuario en Firebase Auth y guardar en Firestore
     // ===========================
+    private void createFirebaseUserAndSave(String name, String email, String password) {
+        if (mAuth == null) {
+            toast("Firebase Auth no inicializado");
+            return;
+        }
+
+        mAuth.createUserWithEmailAndPassword(email, password)
+                .addOnCompleteListener(this, task -> {
+                    if (task.isSuccessful()) {
+                        FirebaseUser firebaseUser = mAuth.getCurrentUser();
+                        if (firebaseUser != null) {
+                            // Guardar en Firestore después de crear en Auth
+                            saveUserToFirestore(name, email);
+                            clearFields();
+                            etName.postDelayed(this::finish, 900);
+                        }
+                    } else {
+                        String errorMsg = task.getException() != null ? 
+                                task.getException().getMessage() : "Error desconocido";
+                        toast("Error al crear usuario en Firebase: " + errorMsg);
+                    }
+                });
+    }
+
     /**
      * Guarda/actualiza el usuario en la colección "users" usando el email como ID de documento.
-     * Si más adelante usas Firebase Auth, puedes cambiar el docId por el UID del usuario.
      */
     private void saveUserToFirestore(String name, String email) {
         if (firestore == null) {
@@ -132,9 +156,9 @@ public class LoginRegisterActivity extends AppCompatActivity {
 
         // Usamos el email como ID de documento para evitar duplicados.
         firestore.collection("users")
-                .document(email) // si luego usas Auth: .document(firebaseUser.getUid())
+                .document(email)
                 .set(data, SetOptions.merge())
-                .addOnSuccessListener(unused -> toast("Guardado en Firebase"))
+                .addOnSuccessListener(unused -> toast("Usuario creado y guardado en Firebase"))
                 .addOnFailureListener(e -> toast("No se pudo guardar en Firebase: " + e.getMessage()));
     }
 
