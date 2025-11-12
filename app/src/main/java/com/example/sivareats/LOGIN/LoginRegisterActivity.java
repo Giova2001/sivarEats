@@ -142,6 +142,7 @@ public class LoginRegisterActivity extends AppCompatActivity {
 
     /**
      * Guarda/actualiza el usuario en la colección "users" usando el email como ID de documento.
+     * Estructura completa del documento en Firestore.
      */
     private void saveUserToFirestore(String name, String email) {
         if (firestore == null) {
@@ -149,17 +150,55 @@ public class LoginRegisterActivity extends AppCompatActivity {
             return;
         }
 
-        Map<String, Object> data = new HashMap<>();
-        data.put("name", name);
-        data.put("email", email);
-        data.put("createdAt", FieldValue.serverTimestamp());
+        // Obtener datos completos desde Room para sincronizar todo
+        ioExecutor.execute(() -> {
+            try {
+                User localUser = userDao.findByEmail(email);
+                
+                // Preparar datos completos para Firestore
+                Map<String, Object> data = new HashMap<>();
+                data.put("name", name);
+                data.put("email", email);
+                data.put("alias", localUser != null && localUser.getAlias() != null ? localUser.getAlias() : "");
+                data.put("telefono", localUser != null && localUser.getTelefono() != null ? localUser.getTelefono() : "");
+                data.put("profile_image_url", localUser != null && localUser.getProfileImageUrl() != null ? localUser.getProfileImageUrl() : "");
+                data.put("rol", localUser != null && localUser.getRol() != null ? localUser.getRol() : "USUARIO_NORMAL");
+                data.put("createdAt", FieldValue.serverTimestamp());
+                data.put("lastLoginAt", FieldValue.serverTimestamp());
 
-        // Usamos el email como ID de documento para evitar duplicados.
-        firestore.collection("users")
-                .document(email)
-                .set(data, SetOptions.merge())
-                .addOnSuccessListener(unused -> toast("Usuario creado y guardado en Firebase"))
-                .addOnFailureListener(e -> toast("No se pudo guardar en Firebase: " + e.getMessage()));
+                // Usamos el email como ID de documento para evitar duplicados.
+                firestore.collection("users")
+                        .document(email)
+                        .set(data, SetOptions.merge())
+                        .addOnSuccessListener(unused -> {
+                            runOnUiThread(() -> toast("Usuario guardado en Firebase (Auth + Firestore)"));
+                        })
+                        .addOnFailureListener(e -> {
+                            runOnUiThread(() -> toast("No se pudo guardar en Firestore: " + e.getMessage()));
+                        });
+            } catch (Exception e) {
+                // Si falla obtener de Room, guardar con datos básicos
+                Map<String, Object> basicData = new HashMap<>();
+                basicData.put("name", name);
+                basicData.put("email", email);
+                basicData.put("alias", "");
+                basicData.put("telefono", "");
+                basicData.put("profile_image_url", "");
+                basicData.put("rol", "USUARIO_NORMAL");
+                basicData.put("createdAt", FieldValue.serverTimestamp());
+                basicData.put("lastLoginAt", FieldValue.serverTimestamp());
+
+                firestore.collection("users")
+                        .document(email)
+                        .set(basicData, SetOptions.merge())
+                        .addOnSuccessListener(unused -> {
+                            runOnUiThread(() -> toast("Usuario guardado en Firebase (Auth + Firestore)"));
+                        })
+                        .addOnFailureListener(e2 -> {
+                            runOnUiThread(() -> toast("No se pudo guardar en Firestore: " + e2.getMessage()));
+                        });
+            }
+        });
     }
 
     // --------------------

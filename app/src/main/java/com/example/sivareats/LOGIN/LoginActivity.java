@@ -16,11 +16,17 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.sivareats.R;
 import com.example.sivareats.data.AppDatabase;
+import com.example.sivareats.data.User;
 import com.example.sivareats.data.UserDao;
 import com.example.sivareats.ui.NavegacionActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.SetOptions;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -34,14 +40,16 @@ public class LoginActivity extends AppCompatActivity {
     private UserDao userDao;
     private final ExecutorService ioExecutor = Executors.newSingleThreadExecutor();
     private FirebaseAuth mAuth;
+    private FirebaseFirestore firestore;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        // Firebase Auth
+        // Firebase Auth y Firestore
         mAuth = FirebaseAuth.getInstance();
+        firestore = FirebaseFirestore.getInstance();
 
         // Vistas
         etEmail = findViewById(R.id.etEmail);
@@ -136,6 +144,9 @@ public class LoginActivity extends AppCompatActivity {
                             SharedPreferences sessionPrefs = getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
                             sessionPrefs.edit().putString("CURRENT_USER_EMAIL", email).apply();
                             
+                            // Sincronizar con Firestore (3ra forma: colección)
+                            syncUserToFirestore(email);
+                            
                             toast("Inicio de sesión exitoso");
                             goToMainScreen();
                         }
@@ -167,6 +178,9 @@ public class LoginActivity extends AppCompatActivity {
                             SharedPreferences sessionPrefs = getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
                             sessionPrefs.edit().putString("CURRENT_USER_EMAIL", email).apply();
                             
+                            // Sincronizar con Firestore (3ra forma: colección)
+                            syncUserToFirestore(email);
+                            
                             toast("Usuario creado y autenticado");
                             goToMainScreen();
                         }
@@ -176,6 +190,56 @@ public class LoginActivity extends AppCompatActivity {
                         toast("Error al autenticar: " + errorMsg);
                     }
                 });
+    }
+
+    /**
+     * Sincroniza el usuario con Firestore (colección "users").
+     * Obtiene los datos desde Room y los guarda/actualiza en Firestore.
+     */
+    private void syncUserToFirestore(String email) {
+        if (firestore == null) {
+            return;
+        }
+
+        // Obtener datos completos del usuario desde Room
+        ioExecutor.execute(() -> {
+            try {
+                User localUser = userDao.findByEmail(email);
+                if (localUser != null) {
+                    // Preparar datos para Firestore
+                    Map<String, Object> userData = new HashMap<>();
+                    userData.put("name", localUser.getName());
+                    userData.put("email", localUser.getEmail());
+                    userData.put("alias", localUser.getAlias() != null ? localUser.getAlias() : "");
+                    userData.put("telefono", localUser.getTelefono() != null ? localUser.getTelefono() : "");
+                    userData.put("profile_image_url", localUser.getProfileImageUrl() != null ? localUser.getProfileImageUrl() : "");
+                    userData.put("rol", localUser.getRol() != null ? localUser.getRol() : "USUARIO_NORMAL");
+                    userData.put("lastLoginAt", FieldValue.serverTimestamp());
+                    
+                    // Si el documento no existe, agregar createdAt
+                    firestore.collection("users").document(email)
+                            .get()
+                            .addOnSuccessListener(documentSnapshot -> {
+                                if (!documentSnapshot.exists()) {
+                                    userData.put("createdAt", FieldValue.serverTimestamp());
+                                }
+                                
+                                // Guardar/actualizar en Firestore
+                                firestore.collection("users")
+                                        .document(email)
+                                        .set(userData, SetOptions.merge())
+                                        .addOnSuccessListener(unused -> {
+                                            // Sincronización exitosa
+                                        })
+                                        .addOnFailureListener(e -> {
+                                            // Error silencioso, no afecta el login
+                                        });
+                            });
+                }
+            } catch (Exception e) {
+                // Error silencioso, no afecta el login
+            }
+        });
     }
 
     // Utils
