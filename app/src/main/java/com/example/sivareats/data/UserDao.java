@@ -6,6 +6,8 @@ import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
 import androidx.room.Update;
 
+import java.util.List;
+
 @Dao
 public interface UserDao {
 
@@ -38,4 +40,7 @@ public interface UserDao {
 
     @Query("SELECT * FROM users ORDER BY id DESC LIMIT 1")
     User findFirstUser();
+
+    @Query("SELECT * FROM users")
+    List<User> getAllUsers();
 }

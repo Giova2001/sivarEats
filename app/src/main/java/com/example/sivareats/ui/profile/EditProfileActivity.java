@@ -74,8 +74,6 @@ public class EditProfileActivity extends AppCompatActivity {
         initGalleryLauncher();
         initCloudinary();
 
-        loadUserProfile();
-
         btnSave.setOnClickListener(v -> saveUserProfile());
         btnCambiarFoto.setOnClickListener(v -> openGallery());
         setupKeyboardHandling();
@@ -106,30 +104,36 @@ public class EditProfileActivity extends AppCompatActivity {
         roomDb = AppDatabase.getInstance(getApplicationContext());
 
         FirebaseUser currentUser = mAuth.getCurrentUser();
-        if (currentUser != null) {
+        if (currentUser != null && currentUser.getEmail() != null) {
             userEmail = currentUser.getEmail();
+            Log.d("EditProfile", "Usuario encontrado en Firebase Auth: " + userEmail);
             // Guardar en SharedPreferences para uso futuro
             SharedPreferences sessionPrefs = getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
             sessionPrefs.edit().putString("CURRENT_USER_EMAIL", userEmail).apply();
             SharedPreferences loginPrefs = getSharedPreferences("loginPrefs", Context.MODE_PRIVATE);
             loginPrefs.edit().putString("email", userEmail).apply();
+            // Cargar perfil
+            loadUserProfile();
         } else {
+            Log.d("EditProfile", "Usuario no encontrado en Firebase Auth, buscando en otras fuentes...");
             // Como fallback, intentar obtenerlo de múltiples fuentes
             SharedPreferences sessionPrefs = getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
             userEmail = sessionPrefs.getString("CURRENT_USER_EMAIL", null);
-            
+
             if (userEmail == null) {
                 SharedPreferences loginPrefs = getSharedPreferences("loginPrefs", Context.MODE_PRIVATE);
                 userEmail = loginPrefs.getString("email", null);
             }
-            
+
             // Si aún no se encuentra, intentar obtener desde Room (último usuario registrado)
             if (userEmail == null) {
+                Log.d("EditProfile", "Buscando usuario en Room...");
                 ioExecutor.execute(() -> {
                     try {
                         User lastUser = roomDb.userDao().findFirstUser();
                         if (lastUser != null && lastUser.getEmail() != null) {
                             String foundEmail = lastUser.getEmail();
+                            Log.d("EditProfile", "Usuario encontrado en Room: " + foundEmail);
                             runOnUiThread(() -> {
                                 userEmail = foundEmail;
                                 // Guardar para uso futuro
@@ -141,12 +145,14 @@ public class EditProfileActivity extends AppCompatActivity {
                                 loadUserProfile();
                             });
                         } else {
+                            Log.e("EditProfile", "No se encontró usuario en Room");
                             runOnUiThread(() -> {
                                 Toast.makeText(this, "Error: Usuario no identificado. Por favor, inicia sesión nuevamente.", Toast.LENGTH_LONG).show();
                                 finish();
                             });
                         }
                     } catch (Exception e) {
+                        Log.e("EditProfile", "Error al buscar usuario en Room", e);
                         runOnUiThread(() -> {
                             Toast.makeText(this, "Error: Usuario no identificado. Por favor, inicia sesión nuevamente.", Toast.LENGTH_LONG).show();
                             finish();
@@ -154,12 +160,11 @@ public class EditProfileActivity extends AppCompatActivity {
                     }
                 });
                 return; // Salir aquí, loadUserProfile se llamará desde el hilo si encuentra usuario
+            } else {
+                Log.d("EditProfile", "Usuario encontrado en SharedPreferences: " + userEmail);
+                // Si encontramos el email en SharedPreferences, cargar el perfil
+                loadUserProfile();
             }
-        }
-
-        if (userEmail == null || userEmail.isEmpty()) {
-            Toast.makeText(this, "Error: Usuario no identificado. Por favor, inicia sesión nuevamente.", Toast.LENGTH_LONG).show();
-            finish();
         }
     }
 
@@ -192,36 +197,151 @@ public class EditProfileActivity extends AppCompatActivity {
     }
 
     private void loadUserProfile() {
-        if (userEmail == null) return;
+        if (userEmail == null || userEmail.isEmpty()) {
+            Log.e("EditProfile", "userEmail es null o vacío, no se puede cargar el perfil");
+            return;
+        }
+
+        Log.d("EditProfile", "Cargando perfil para: " + userEmail);
 
         // Cargar desde Firestore como fuente principal de la verdad
         db.collection("users").document(userEmail).get()
                 .addOnSuccessListener(document -> {
                     if (document.exists()) {
+                        Log.d("EditProfile", "Usuario encontrado en Firestore");
                         User user = document.toObject(User.class);
                         if(user != null) {
-                             populateUi(user);
-                             // Sincronizar con Room
-                             syncUserToRoom(user);
+                            populateUi(user);
+                            // Sincronizar con Room
+                            syncUserToRoom(user);
+                        } else {
+                            Log.e("EditProfile", "Error al convertir documento a User, cargando desde Room");
+                            loadUserFromRoomAndSync();
                         }
                     } else {
-                         // Si no existe en Firestore, intentar cargar desde Room
-                         loadUserFromRoom();
+                        Log.d("EditProfile", "Usuario no encontrado en Firestore, cargando desde Room");
+                        // Si no existe en Firestore, cargar desde Room y sincronizar a Firebase
+                        loadUserFromRoomAndSync();
                     }
                 })
                 .addOnFailureListener(e -> {
-                     Log.e("EditProfile", "Error al cargar de Firestore, cargando de Room", e);
-                     loadUserFromRoom();
+                    Log.e("EditProfile", "Error al cargar de Firestore, cargando de Room", e);
+                    loadUserFromRoomAndSync();
                 });
     }
-    
-    private void loadUserFromRoom(){
+
+    private void loadUserFromRoomAndSync(){
+        if (userEmail == null || userEmail.isEmpty()) {
+            Log.e("EditProfile", "userEmail es null, no se puede cargar desde Room");
+            return;
+        }
+
+        Log.d("EditProfile", "Cargando usuario desde Room: " + userEmail);
         ioExecutor.execute(() -> {
-            User user = roomDb.userDao().findByEmail(userEmail);
-            if (user != null) {
-                runOnUiThread(() -> populateUi(user));
+            try {
+                User user = roomDb.userDao().findByEmail(userEmail);
+                if (user != null) {
+                    Log.d("EditProfile", "Usuario encontrado en Room, mostrando en UI");
+                    runOnUiThread(() -> {
+                        populateUi(user);
+                        // Sincronizar este usuario a Firebase si no existe
+                        syncRoomUserToFirestore(user);
+                    });
+                } else {
+                    Log.e("EditProfile", "Usuario no encontrado en Room: " + userEmail);
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, "Usuario no encontrado. Por favor, inicia sesión nuevamente.", Toast.LENGTH_SHORT).show();
+                    });
+                }
+            } catch (Exception e) {
+                Log.e("EditProfile", "Error al cargar usuario desde Room", e);
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Error al cargar datos del usuario.", Toast.LENGTH_SHORT).show();
+                });
             }
         });
+    }
+
+    /**
+     * Sincroniza un usuario de Room a Firestore si no existe en Firebase.
+     * También intenta autenticarlo en Firebase Auth si no está autenticado.
+     */
+    private void syncRoomUserToFirestore(User localUser) {
+        if (localUser == null || localUser.getEmail() == null) return;
+
+        // Verificar si existe en Firestore
+        db.collection("users").document(localUser.getEmail()).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (!documentSnapshot.exists()) {
+                        // No existe en Firestore, sincronizarlo
+                        Map<String, Object> userData = new HashMap<>();
+                        userData.put("name", localUser.getName());
+                        userData.put("email", localUser.getEmail());
+                        userData.put("alias", localUser.getAlias() != null ? localUser.getAlias() : "");
+                        userData.put("telefono", localUser.getTelefono() != null ? localUser.getTelefono() : "");
+                        userData.put("profile_image_url", localUser.getProfileImageUrl() != null ? localUser.getProfileImageUrl() : "");
+                        userData.put("rol", localUser.getRol() != null ? localUser.getRol() : "USUARIO_NORMAL");
+                        userData.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
+                        userData.put("lastLoginAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
+
+                        db.collection("users")
+                                .document(localUser.getEmail())
+                                .set(userData, com.google.firebase.firestore.SetOptions.merge())
+                                .addOnSuccessListener(aVoid -> {
+                                    Log.d("EditProfile", "Usuario sincronizado a Firestore: " + localUser.getEmail());
+                                    // Intentar autenticar en Firebase Auth si no está autenticado
+                                    tryAuthenticateUser(localUser.getEmail(), localUser.getPassword());
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.e("EditProfile", "Error al sincronizar usuario a Firestore", e);
+                                });
+                    } else {
+                        // Ya existe en Firestore, solo intentar autenticar si no está autenticado
+                        FirebaseUser currentUser = mAuth.getCurrentUser();
+                        if (currentUser == null) {
+                            tryAuthenticateUser(localUser.getEmail(), localUser.getPassword());
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("EditProfile", "Error al verificar usuario en Firestore", e);
+                });
+    }
+
+    /**
+     * Intenta autenticar al usuario en Firebase Auth usando las credenciales de Room.
+     */
+    private void tryAuthenticateUser(String email, String password) {
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser != null && currentUser.getEmail() != null && currentUser.getEmail().equals(email)) {
+            // Ya está autenticado
+            return;
+        }
+
+        // Intentar autenticar
+        mAuth.signInWithEmailAndPassword(email, password)
+                .addOnSuccessListener(authResult -> {
+                    Log.d("EditProfile", "Usuario autenticado en Firebase Auth: " + email);
+                    // Guardar email en SharedPreferences
+                    SharedPreferences sessionPrefs = getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
+                    sessionPrefs.edit().putString("CURRENT_USER_EMAIL", email).apply();
+                    SharedPreferences loginPrefs = getSharedPreferences("loginPrefs", Context.MODE_PRIVATE);
+                    loginPrefs.edit().putString("email", email).apply();
+                })
+                .addOnFailureListener(e -> {
+                    // Si falla el login, intentar crear el usuario en Firebase Auth
+                    mAuth.createUserWithEmailAndPassword(email, password)
+                            .addOnSuccessListener(authResult -> {
+                                Log.d("EditProfile", "Usuario creado en Firebase Auth: " + email);
+                                SharedPreferences sessionPrefs = getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
+                                sessionPrefs.edit().putString("CURRENT_USER_EMAIL", email).apply();
+                                SharedPreferences loginPrefs = getSharedPreferences("loginPrefs", Context.MODE_PRIVATE);
+                                loginPrefs.edit().putString("email", email).apply();
+                            })
+                            .addOnFailureListener(e2 -> {
+                                Log.e("EditProfile", "No se pudo autenticar ni crear usuario en Firebase Auth", e2);
+                            });
+                });
     }
 
     private void populateUi(User user) {
@@ -238,8 +358,8 @@ public class EditProfileActivity extends AppCompatActivity {
                     .into(imgProfile);
         }
     }
-    
-     private void syncUserToRoom(User firestoreUser) {
+
+    private void syncUserToRoom(User firestoreUser) {
         ioExecutor.execute(() -> {
             // Se necesita la contraseña hasheada que solo está en Room
             User localUser = roomDb.userDao().findByEmail(userEmail);
@@ -266,29 +386,25 @@ public class EditProfileActivity extends AppCompatActivity {
         String newName = etName.getText().toString().trim();
         String newAlias = etAlias.getText().toString().trim();
         String newPhone = etPhone.getText().toString().trim();
-        
+
         // El campo de contraseña ya no existe en la UI
 
-        // Crear un mapa SOLAMENTE con los campos a actualizar en Firestore.
-        // NUNCA incluir la contraseña.
+        // Crear un mapa con TODOS los campos a actualizar/agregar en Firestore.
+        // Usar set con merge para agregar campos nuevos si no existen.
         Map<String, Object> updates = new HashMap<>();
         updates.put("name", newName);
-        updates.put("alias", newAlias);
-        updates.put("telefono", newPhone);
+        updates.put("alias", newAlias != null ? newAlias : "");
+        updates.put("telefono", newPhone != null ? newPhone : "");
+        updates.put("email", userEmail); // Asegurar que el email esté presente
+        updates.put("lastLoginAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
 
         btnSave.setEnabled(false);
 
-        // Verificar que el usuario esté autenticado antes de actualizar
-        FirebaseUser currentUser = mAuth.getCurrentUser();
-        if (currentUser == null) {
-            Toast.makeText(this, "Error: Sesión expirada. Por favor, inicia sesión nuevamente.", Toast.LENGTH_LONG).show();
-            btnSave.setEnabled(true);
-            return;
-        }
-
-        // 1. Guardar en Firestore
+        // 1. Guardar en Firestore usando set con merge para agregar campos nuevos
+        // Esto asegura que si el documento no tiene algunos campos, se agreguen
+        // No requiere autenticación en Firebase Auth si ya tenemos el email identificado
         db.collection("users").document(userEmail)
-                .update(updates)
+                .set(updates, com.google.firebase.firestore.SetOptions.merge())
                 .addOnSuccessListener(aVoid -> {
                     // 2. Si Firestore tiene éxito, actualizar Room
                     ioExecutor.execute(() -> {
@@ -301,36 +417,33 @@ public class EditProfileActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e -> {
                     String errorMsg = e.getMessage();
-                    // Si el error es de permisos, intentar con set en lugar de update
-                    if (errorMsg != null && (errorMsg.contains("permission") || errorMsg.contains("PERMISSION_DENIED"))) {
-                        // Intentar crear/actualizar con set
-                        Map<String, Object> fullData = new HashMap<>(updates);
-                        fullData.put("email", userEmail);
-                        db.collection("users").document(userEmail)
-                                .set(fullData, com.google.firebase.firestore.SetOptions.merge())
-                                .addOnSuccessListener(aVoid -> {
-                                    ioExecutor.execute(() -> {
-                                        roomDb.userDao().updateProfileDetails(userEmail, newName, newAlias, newPhone);
-                                        runOnUiThread(() -> {
-                                            Toast.makeText(this, "Perfil actualizado correctamente", Toast.LENGTH_SHORT).show();
-                                            finish();
-                                        });
+                    // Si falla, intentar con update como fallback
+                    Map<String, Object> updateOnly = new HashMap<>();
+                    updateOnly.put("name", newName);
+                    updateOnly.put("alias", newAlias != null ? newAlias : "");
+                    updateOnly.put("telefono", newPhone != null ? newPhone : "");
+
+                    db.collection("users").document(userEmail)
+                            .update(updateOnly)
+                            .addOnSuccessListener(aVoid -> {
+                                ioExecutor.execute(() -> {
+                                    roomDb.userDao().updateProfileDetails(userEmail, newName, newAlias, newPhone);
+                                    runOnUiThread(() -> {
+                                        Toast.makeText(this, "Perfil actualizado correctamente", Toast.LENGTH_SHORT).show();
+                                        finish();
                                     });
-                                })
-                                .addOnFailureListener(e2 -> {
-                                    Toast.makeText(this, "Error al actualizar el perfil: " + e2.getMessage(), Toast.LENGTH_SHORT).show();
-                                    btnSave.setEnabled(true);
                                 });
-                    } else {
-                        Toast.makeText(this, "Error al actualizar el perfil: " + errorMsg, Toast.LENGTH_SHORT).show();
-                        btnSave.setEnabled(true);
-                    }
+                            })
+                            .addOnFailureListener(e2 -> {
+                                Toast.makeText(this, "Error al actualizar el perfil: " + e2.getMessage(), Toast.LENGTH_SHORT).show();
+                                btnSave.setEnabled(true);
+                            });
                 });
     }
 
     private void uploadImageToCloudinary(Uri imageUri) {
         if (userEmail == null) return;
-        
+
         Toast.makeText(this, "Subiendo foto...", Toast.LENGTH_SHORT).show();
         String fileName = "profile_" + userEmail.replace("@", "_").replace(".", "_");
 
@@ -349,9 +462,9 @@ public class EditProfileActivity extends AppCompatActivity {
 
                     @Override
                     public void onError(String requestId, ErrorInfo error) {
-                         runOnUiThread(() -> Toast.makeText(EditProfileActivity.this, "Error al subir imagen.", Toast.LENGTH_SHORT).show());
+                        runOnUiThread(() -> Toast.makeText(EditProfileActivity.this, "Error al subir imagen.", Toast.LENGTH_SHORT).show());
                     }
-                    
+
                     @Override
                     public void onStart(String requestId) {}
                     @Override
@@ -365,31 +478,25 @@ public class EditProfileActivity extends AppCompatActivity {
     private void updateProfileImageUrl(String imageUrl) {
         if (userEmail == null) return;
 
-        // Verificar autenticación
-        FirebaseUser currentUser = mAuth.getCurrentUser();
-        if (currentUser == null) {
-            Toast.makeText(this, "Error: Sesión expirada", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        // Actualizar en Firestore
+        // Actualizar en Firestore (no requiere autenticación si ya tenemos el email)
         Map<String, Object> updateData = new HashMap<>();
         updateData.put("profile_image_url", imageUrl);
-        
+        updateData.put("email", userEmail); // Asegurar que el email esté presente
+
+        // Usar set con merge para asegurar que se guarde correctamente
         db.collection("users").document(userEmail)
-                .update(updateData)
+                .set(updateData, com.google.firebase.firestore.SetOptions.merge())
                 .addOnSuccessListener(aVoid -> {
                     // Actualizar en Room
                     ioExecutor.execute(() -> roomDb.userDao().updateProfileUrl(userEmail, imageUrl));
                     Toast.makeText(this, "Foto de perfil actualizada", Toast.LENGTH_SHORT).show();
                 })
                 .addOnFailureListener(e -> {
-                    // Si falla update, intentar con set
-                    Map<String, Object> fullData = new HashMap<>();
-                    fullData.put("email", userEmail);
-                    fullData.put("profile_image_url", imageUrl);
+                    // Si falla set, intentar con update como fallback
+                    Map<String, Object> updateOnly = new HashMap<>();
+                    updateOnly.put("profile_image_url", imageUrl);
                     db.collection("users").document(userEmail)
-                            .set(fullData, com.google.firebase.firestore.SetOptions.merge())
+                            .update(updateOnly)
                             .addOnSuccessListener(aVoid -> {
                                 ioExecutor.execute(() -> roomDb.userDao().updateProfileUrl(userEmail, imageUrl));
                                 Toast.makeText(this, "Foto de perfil actualizada", Toast.LENGTH_SHORT).show();
