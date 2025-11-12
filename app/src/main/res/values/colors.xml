@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--  COLORES PRIMARIOS -->
+    <color name="primary">#FF6B35</color>
+    <color name="primary_dark">#E55A2B</color>
+    <color name="primary_light">#FF8A65</color>
+
+    <!--  COLORES SECUNDARIOS -->
+    <color name="secondary">#2E7D32</color>
+    <color name="secondary_dark">#1B5E20</color>
+    <color name="secondary_light">#4CAF50</color>
+
+    <!--  COLORES DE ACENTO -->
+    <color name="accent">#FFC107</color>
+    <color name="accent_dark">#FF8F00</color>
+
+    <!--  COLORES NEUTROS / FONDOS -->
+    <color name="background">#FAFAFA</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="on_surface">#212121</color>
+    <color name="on_surface_light">#757575</color>
+
+    <!--  COLORES DE TEXTO -->
+    <color name="text_primary">#212121</color>
+    <color name="text_secondary">#757575</color>
+    <color name="text_hint">#BDBDBD</color>
+    <color name="text_on_primary">#FFFFFF</color>
+    <color name="text_on_secondary">#FFFFFF</color>
+
+    <!-- ⚙ COLORES DE ESTADO -->
+    <color name="success">#4CAF50</color>
+    <color name="warning">#FF9800</color>
+    <color name="error">#F44336</color>
+    <color name="info">#2196F3</color>
+
+    <!--  COLORES DE BOTONES -->
+    <color name="button_primary">#FF6B35</color>
+    <color name="button_primary_text">#FFFFFF</color>
+    <color name="button_secondary">#E0E0E0</color>
+    <color name="button_secondary_text">#212121</color>
+
+    <!--  TARJETAS Y SUPERFICIES -->
+    <color name="card_background">#FFFFFF</color>
+    <color name="card_elevation">#00000014</color>
+
+    <!--  ICONOS -->
+    <color name="icon_active">#FF6B35</color>
+    <color name="icon_inactive">#9E9E9E</color>
+
+    <!--  SEPARADORES -->
+    <color name="divider">#E0E0E0</color>
+    <color name="divider_light">#F5F5F5</color>
+
+    <color name="searchBg">#F1F4F7</color>   <!-- gris claro del buscador -->
+    <color name="tabBlue">@color/info</color> <!-- reutiliza tu azul info (#2196F3) -->
+
+
+</resources>

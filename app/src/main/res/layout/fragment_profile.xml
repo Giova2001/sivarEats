@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Header con información del usuario -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/info"
+            android:elevation="0dp"
+            android:gravity="fill_horizontal"
+            android:orientation="horizontal"
+            android:padding="30dp">
+
+            <!-- Foto de perfil -->
+
+            <!-- Nombre -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="8dp"
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvProfileName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="16dp"
+                    android:text="Carlos Santana"
+                    android:textColor="@color/text_on_secondary"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvProfilePhone"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="teléfono: 5696 3144"
+                    android:textColor="@color/text_on_secondary"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvProfileEmail"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Correo: cs46783@gmail.com"
+                    android:textColor="@color/text_on_secondary"
+                    android:textSize="14sp" />
+
+            </LinearLayout>
+
+            <Space
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+
+            <ImageView
+                android:id="@+id/imgPerfil"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                android:layout_gravity="right"
+                android:background="@drawable/circle_background"
+                android:contentDescription="Foto de perfil"
+                android:scaleType="centerCrop"
+                android:src="@drawable/ic_profile" />
+
+            <!-- Información de contacto -->
+
+        </LinearLayout>
+
+        <!-- Sección de botones principales -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginTop="16dp"
+            android:background="@color/background"
+            android:elevation="2dp"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Fila 1 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="300px"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnMetodoPago"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="300px"
+                    android:layout_marginBottom="20dp"
+                    android:text="Método de pago"
+                    android:textColor="@color/text_primary"
+                    app:icon="@drawable/ic_payment"
+                    app:iconGravity="textStart"
+                    app:iconPadding="8dp"
+                    app:iconTint="@color/info" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnEditarPerfil"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="300px"
+                    android:layout_marginBottom="20dp"
+                    android:text="Editar Perfil"
+                    android:textColor="@color/text_primary"
+                    app:icon="@drawable/ic_edit"
+                    app:iconGravity="textStart"
+                    app:iconPadding="8dp"
+                    app:iconTint="@color/info" />
+            </LinearLayout>
+
+            <!-- Fila 2 -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnUbicacion"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="Ubicación"
+                android:textColor="@color/text_primary"
+                app:icon="@drawable/ic_location"
+                app:iconGravity="textStart"
+                app:iconPadding="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCodigoInvitacion"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="Código de invitación"
+                android:textColor="@color/text_primary"
+                app:icon="@drawable/ic_invite"
+                app:iconGravity="textStart"
+                app:iconPadding="8dp" />
+
+            <!-- Fila 3 -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSoporte"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="Soporte técnico"
+                android:textColor="@color/text_primary"
+                app:icon="@drawable/ic_support"
+                app:iconGravity="textStart"
+                app:iconPadding="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnTerminos"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="Condiciones y términos de uso"
+                android:textColor="@color/text_primary"
+                app:icon="@drawable/ic_terms"
+                app:iconGravity="textStart"
+                app:iconPadding="8dp" />
+
+            <!-- Botón de activar biométrica -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnActivarBiometrica"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="50dp"
+                android:layout_marginBottom="8dp"
+                android:text="Activar inicio con huella o patrón"
+                android:textColor="@color/info" />
+
+            <!-- Botón de cerrar sesión (diferente estilo) -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCerrarSesion"
+                style="@style/Widget.Material3.Button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:backgroundTint="@color/error"
+                android:text="Cerrar sesión"
+                android:textColor="@android:color/white"
+                app:icon="@drawable/ic_logout"
+                app:iconGravity="textStart"
+                app:iconPadding="15dp"
+                app:iconTint="@android:color/white" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

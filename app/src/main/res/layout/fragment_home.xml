@@ -1,0 +1,388 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFFFFF"
+    tools:context=".fragments.HomeFragment">
+
+    <!-- ======= CONTENIDO PRINCIPAL ======= -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/layoutPrincipalHome"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:background="#FFFFFF"
+        tools:ignore="ScrollViewCount">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="16dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="8dp">
+
+            <!-- Título -->
+            <TextView
+                android:id="@+id/tvTitulo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="SIVAR EATS"
+                android:textSize="32sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/inter_bold"
+                android:textColor="#000000"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"/>
+
+            <!-- Barra de búsqueda -->
+            <LinearLayout
+                android:id="@+id/layoutBuscar"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:orientation="horizontal"
+                android:background="@drawable/barra_busqueda_home"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:gravity="center_vertical"
+                app:layout_constraintTop_toBottomOf="@id/tvTitulo"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:layout_marginTop="16dp">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_search"
+                    app:tint="#888888" />
+
+                <EditText
+                    android:id="@+id/etBuscar"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:hint="Buscar en SIVAR EATS"
+                    android:background="@null"
+                    android:paddingStart="8dp"
+                    android:textColor="#000000"
+                    android:textColorHint="#888888"
+                    android:textSize="16sp"/>
+            </LinearLayout>
+
+            <!-- Línea -->
+            <View
+                android:id="@+id/lineaSubrayado"
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:background="#DDDDDD"
+                app:layout_constraintTop_toBottomOf="@id/layoutBuscar"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"/>
+
+            <!-- Scroll horizontal de categorías -->
+            <HorizontalScrollView
+                android:id="@+id/scrollCategorias"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:scrollbars="none"
+                app:layout_constraintTop_toBottomOf="@id/lineaSubrayado"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:layout_marginTop="16dp">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Restaurantes"
+                        app:icon="@drawable/ic_pin"
+                        app:iconGravity="textStart"
+                        app:iconPadding="8dp"
+                        app:cornerRadius="16dp"
+                        app:iconTint="#000000"
+                        app:backgroundTint="#F0F0F0"
+                        android:textColor="#000000"
+                        android:layout_marginEnd="12dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:icon="@drawable/ic_corazon"
+                        app:iconGravity="textStart"
+                        app:iconPadding="8dp"
+                        app:iconTint="#000000"
+                        android:text="Favoritos"
+                        android:layout_marginEnd="12dp"
+                        app:cornerRadius="16dp"
+                        app:backgroundTint="#F0F0F0"
+                        android:textColor="#000000"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:icon="@drawable/ic_china"
+                        app:iconGravity="textStart"
+                        app:iconPadding="8dp"
+                        app:iconTint="#000000"
+                        android:text="China"
+                        android:layout_marginEnd="12dp"
+                        app:cornerRadius="16dp"
+                        app:backgroundTint="#F0F0F0"
+                        android:textColor="#000000"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:icon="@drawable/ic_pizza"
+                        app:iconGravity="textStart"
+                        app:iconPadding="8dp"
+                        app:iconTint="#000000"
+                        android:text="Pizza"
+                        android:layout_marginEnd="12dp"
+                        app:cornerRadius="16dp"
+                        app:backgroundTint="#F0F0F0"
+                        android:textColor="#000000"/>
+
+                </LinearLayout>
+            </HorizontalScrollView>
+
+            <!-- Botón Ofertas -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnOfertasDelDia"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:text="Ofertas del día"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                app:cornerRadius="14dp"
+                app:backgroundTint="#1F41EC"
+                app:layout_constraintTop_toBottomOf="@id/scrollCategorias"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:layout_marginTop="16dp"/>
+
+            <!-- Scroll Ofertas -->
+            <HorizontalScrollView
+                android:id="@+id/scrollOfertas"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:scrollbars="none"
+                app:layout_constraintTop_toBottomOf="@id/btnOfertasDelDia"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:layout_marginTop="16dp">
+
+                <LinearLayout
+                    android:id="@+id/layoutOfertas"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:clipToPadding="false"/>
+            </HorizontalScrollView>
+
+            <!-- Botón Recomendados -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnRecomendados"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:text="Recomendados"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                app:cornerRadius="14dp"
+                app:backgroundTint="#1F41EC"
+                app:layout_constraintTop_toBottomOf="@id/scrollOfertas"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:layout_marginTop="16dp"/>
+
+            <!-- Scroll Recomendados -->
+            <HorizontalScrollView
+                android:id="@+id/scrollRecomendados"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:scrollbars="none"
+                app:layout_constraintTop_toBottomOf="@id/btnRecomendados"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:layout_marginTop="16dp">
+
+                <LinearLayout
+                    android:id="@+id/layoutRecomendados"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:clipToPadding="false"/>
+            </HorizontalScrollView>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- ======= VISTA DE BUSQUEDA OCULTA ======= -->
+    <LinearLayout
+        android:id="@+id/layoutBusqueda"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="#FFFFFF"
+        android:padding="16dp"
+        android:visibility="gone"
+        android:elevation="10dp">
+
+        <!-- Barra de búsqueda dentro de vista oculta -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:orientation="horizontal"
+            android:background="@drawable/barra_busqueda_home"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_search"
+                app:tint="#888888" />
+
+            <EditText
+                android:id="@+id/etBuscarOculto"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:hint="Buscar en SIVAR EATS"
+                android:background="@null"
+                android:paddingStart="8dp"
+                android:textColor="#000000"
+                android:textColorHint="#888888"
+                android:textSize="16sp"/>
+        </LinearLayout>
+
+        <!-- Título de búsquedas recientes -->
+        <TextView
+            android:id="@+id/tvBusquedasRecientes"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Búsquedas recientes"
+            android:textColor="#666666"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Scroll de búsquedas recientes -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scrollbars="none"
+            android:layout_marginBottom="16dp">
+
+            <LinearLayout
+                android:id="@+id/layoutBusquedasRecientes"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Pizza Peperoni"
+                    android:textColor="#444444"
+                    android:background="@drawable/barra_busqueda_home"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="6dp"
+                    android:layout_marginEnd="8dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Pollo Frito"
+                    android:textColor="#444444"
+                    android:background="@drawable/barra_busqueda_home"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="6dp" />
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <!-- Título de categorías -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Categorías principales"
+            android:textColor="#666666"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Cuadrícula de categorías -->
+        <GridLayout
+            android:id="@+id/gridCategorias"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="2"
+            android:rowCount="3"
+            android:alignmentMode="alignMargins"
+            android:rowOrderPreserved="false">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="8dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/icono_pizza"
+                    app:tint="#000000"
+                    android:layout_marginEnd="8dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Pizza"
+                    android:textColor="#000000"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="8dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/icono_pollo"
+                    app:tint="#000000"
+                    android:layout_marginEnd="8dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Pollo"
+                    android:textColor="#000000"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <!-- Agrega las demás categorías igual: Hamburguesa, Sopas, Saludable, China -->
+
+        </GridLayout>
+    </LinearLayout>
+
+
+</FrameLayout>

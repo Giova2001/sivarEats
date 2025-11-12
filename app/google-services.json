@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "701350718514",
+    "project_id": "sivareats-bb057",
+    "storage_bucket": "sivareats-bb057.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:701350718514:android:5dc02d42a51a8d09f8202b",
+        "android_client_info": {
+          "package_name": "com.example.sivareats"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCu_zW-dYW7vC0h-RNbT-1SonEosjC8dg8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

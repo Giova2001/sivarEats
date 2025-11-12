@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.SivarEats" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Primary colors -->
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorOnPrimary">@color/text_on_primary</item>
+
+        <!-- Secondary colors -->
+        <item name="colorSecondary">@color/secondary</item>
+        <item name="colorOnSecondary">@color/text_on_secondary</item>
+
+        <!-- Surface colors -->
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/on_surface</item>
+
+        <!-- Status bar -->
+        <item name="android:statusBarColor">?attr/colorPrimary</item>
+
+        <!-- Text appearances -->
+        <item name="textAppearanceHeadlineLarge">@style/TextAppearance.SivarEats.Headline.Large
+        </item>
+        <item name="textAppearanceHeadlineMedium">@style/TextAppearance.SivarEats.Headline.Medium
+        </item>
+        <item name="textAppearanceHeadlineSmall">@style/TextAppearance.SivarEats.Headline.Small
+        </item>
+
+        <item name="textAppearanceTitleLarge">@style/TextAppearance.SivarEats.Title.Large</item>
+        <item name="textAppearanceTitleMedium">@style/TextAppearance.SivarEats.Title.Medium</item>
+        <item name="textAppearanceTitleSmall">@style/TextAppearance.SivarEats.Title.Small</item>
+
+        <item name="textAppearanceBodyLarge">@style/TextAppearance.SivarEats.Body.Large</item>
+        <item name="textAppearanceBodyMedium">@style/TextAppearance.SivarEats.Body.Medium</item>
+        <item name="textAppearanceBodySmall">@style/TextAppearance.SivarEats.Body.Small</item>
+
+        <item name="textAppearanceLabelLarge">@style/TextAppearance.SivarEats.Label.Large</item>
+        <item name="textAppearanceLabelMedium">@style/TextAppearance.SivarEats.Label.Medium</item>
+        <item name="textAppearanceLabelSmall">@style/TextAppearance.SivarEats.Label.Small</item>
+    </style>
+
+    <style name="Theme.SivarEats" parent="Base.Theme.SivarEats" />
+
+    <!-- Splash screen theme -->
+    <style name="Theme.SivarEats.Splash" parent="Theme.SivarEats">
+        <item name="android:windowBackground">@color/primary</item>
+        <item name="android:statusBarColor">@color/primary</item>
+    </style>
+</resources>
