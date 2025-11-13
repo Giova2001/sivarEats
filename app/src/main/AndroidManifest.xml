@@ -21,7 +21,12 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.SivarEats">
-
+        <activity
+            android:name=".ui.ordenes.OrdenesItemActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.ordenes.RastreandoPedidoActivity"
+            android:exported="false" />
         <activity
             android:name=".ui.profile.SupportActivity"
             android:exported="false" />

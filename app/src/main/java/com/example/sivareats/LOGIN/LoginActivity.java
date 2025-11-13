@@ -26,6 +26,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -50,6 +51,9 @@ public class LoginActivity extends AppCompatActivity {
         // Firebase Auth y Firestore
         mAuth = FirebaseAuth.getInstance();
         firestore = FirebaseFirestore.getInstance();
+        
+        // Sincronizar usuarios antiguos de Room a Firebase (solo una vez al iniciar)
+        syncAllUsersFromRoomToFirebase();
 
         // Vistas
         etEmail = findViewById(R.id.etEmail);
@@ -189,6 +193,78 @@ public class LoginActivity extends AppCompatActivity {
                                 task.getException().getMessage() : "Error desconocido";
                         toast("Error al autenticar: " + errorMsg);
                     }
+                });
+    }
+
+    /**
+     * Sincroniza todos los usuarios de Room a Firebase (Firestore y Auth).
+     * Esto asegura que usuarios antiguos se migren automáticamente.
+     */
+    private void syncAllUsersFromRoomToFirebase() {
+        ioExecutor.execute(() -> {
+            try {
+                List<User> allUsers = userDao.getAllUsers();
+                if (allUsers != null && !allUsers.isEmpty()) {
+                    for (User user : allUsers) {
+                        if (user.getEmail() != null && !user.getEmail().isEmpty()) {
+                            syncSingleUserToFirebase(user);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // Error silencioso, no afecta el login
+            }
+        });
+    }
+
+    /**
+     * Sincroniza un usuario individual de Room a Firebase.
+     */
+    private void syncSingleUserToFirebase(User localUser) {
+        if (localUser == null || localUser.getEmail() == null) return;
+
+        // Verificar si existe en Firestore
+        firestore.collection("users").document(localUser.getEmail()).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (!documentSnapshot.exists()) {
+                        // No existe en Firestore, sincronizarlo
+                        Map<String, Object> userData = new HashMap<>();
+                        userData.put("name", localUser.getName());
+                        userData.put("email", localUser.getEmail());
+                        userData.put("alias", localUser.getAlias() != null ? localUser.getAlias() : "");
+                        userData.put("telefono", localUser.getTelefono() != null ? localUser.getTelefono() : "");
+                        userData.put("profile_image_url", localUser.getProfileImageUrl() != null ? localUser.getProfileImageUrl() : "");
+                        userData.put("rol", localUser.getRol() != null ? localUser.getRol() : "USUARIO_NORMAL");
+                        userData.put("createdAt", FieldValue.serverTimestamp());
+                        userData.put("lastLoginAt", FieldValue.serverTimestamp());
+
+                        firestore.collection("users")
+                                .document(localUser.getEmail())
+                                .set(userData, SetOptions.merge())
+                                .addOnSuccessListener(aVoid -> {
+                                    // Usuario sincronizado a Firestore
+                                    // Intentar crear en Firebase Auth si no existe
+                                    createUserInFirebaseAuthIfNeeded(localUser.getEmail(), localUser.getPassword());
+                                });
+                    }
+                });
+    }
+
+    /**
+     * Crea el usuario en Firebase Auth si no existe.
+     */
+    private void createUserInFirebaseAuthIfNeeded(String email, String password) {
+        // Intentar autenticar primero para ver si existe
+        mAuth.signInWithEmailAndPassword(email, password)
+                .addOnFailureListener(e -> {
+                    // Si falla, intentar crear el usuario
+                    mAuth.createUserWithEmailAndPassword(email, password)
+                            .addOnSuccessListener(authResult -> {
+                                // Usuario creado en Firebase Auth
+                            })
+                            .addOnFailureListener(e2 -> {
+                                // Error al crear, probablemente ya existe o hay un problema
+                            });
                 });
     }
 

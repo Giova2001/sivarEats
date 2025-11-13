@@ -75,12 +75,14 @@
                 android:text="Historial"/>
         </com.google.android.material.tabs.TabLayout>
 
-        <!-- Contenido fijo/placeholder (opcional) -->
-        <FrameLayout
-            android:id="@+id/contenedorPlaceholder"
+        <!-- RecyclerView para mostrar las tarjetas de pedidos -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerViewPedidos"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"/>
+            android:layout_weight="1"
+            android:paddingTop="8dp"
+            android:clipToPadding="false" />
     </LinearLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

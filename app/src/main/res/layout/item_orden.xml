@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="4dp"
+    app:strokeWidth="0dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Header con estado y fecha -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:id="@+id/tvEstado"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="En curso"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorPrimary" />
+
+            <TextView
+                android:id="@+id/tvFecha"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="15/01/2024"
+                android:textSize="12sp"
+                android:textColor="?attr/colorOnSurfaceVariant" />
+        </LinearLayout>
+
+        <!-- Información del restaurante -->
+        <TextView
+            android:id="@+id/tvRestaurante"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Burger King - Santa Ana"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorOnSurface"
+            android:layout_marginBottom="4dp" />
+
+        <!-- Lista de productos -->
+        <TextView
+            android:id="@+id/tvProductos"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Hamburguesa Doble, Papas Fritas"
+            android:textSize="14sp"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:layout_marginBottom="8dp"
+            android:maxLines="2"
+            android:ellipsize="end" />
+
+        <!-- Dirección -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_location"
+                android:tint="?attr/colorOnSurfaceVariant"
+                android:layout_marginEnd="8dp" />
+
+            <TextView
+                android:id="@+id/tvDireccion"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Calle Principal #123, San Salvador"
+                android:textSize="12sp"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:maxLines="1"
+                android:ellipsize="end" />
+        </LinearLayout>
+
+        <!-- Total y botón de acción -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="8dp">
+
+            <TextView
+                android:id="@+id/tvTotal"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="$25.50"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnRastrear"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Rastrear"
+                android:textSize="12sp"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                app:cornerRadius="20dp"
+                android:minWidth="0dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnVerDetalles"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ver detalles"
+                android:textSize="12sp"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:minWidth="0dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- Tiempo estimado (solo para pedidos activos) -->
+        <TextView
+            android:id="@+id/tvTiempoEstimado"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Llegando en 30 minutos"
+            android:textSize="12sp"
+            android:textColor="?attr/colorPrimary"
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>
+

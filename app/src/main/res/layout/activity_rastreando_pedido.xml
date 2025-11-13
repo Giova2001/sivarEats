@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.ordenes.RastreandoPedidoActivity">
+
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/map_fragment"
+        android:name="com.google.android.gms.maps.SupportMapFragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <ImageButton
+        android:id="@+id/btn_back"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:src="@drawable/ic_return"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:contentDescription="Volver" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/bottom_sheet_tracking"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:cardCornerRadius="20dp"
+        android:layout_margin="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:id="@+id/tv_llegada_tiempo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Llegando en 30 minutos"
+                android:textColor="@android:color/black"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_llegada_titulo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Entrega tu pedido"
+                android:textSize="14sp" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#E0E0E0"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp"/>
+
+            <TextView
+                android:id="@+id/tv_pedido_item"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Hamburgesa Doble"
+                android:textColor="@android:color/black"
+                android:textStyle="bold"
+                android:textSize="16sp"/>
+
+            <TextView
+                android:id="@+id/tv_pedido_restaurante"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Burger King - Santa ana"
+                android:textSize="14sp"/>
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp">
+
+                <ImageView
+                    android:id="@+id/img_repartidor"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/ic_profile" /> <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_toEndOf="@id/img_repartidor"
+                android:layout_centerVertical="true"
+                android:layout_marginStart="12dp">
+
+                <TextView
+                    android:id="@+id/tv_repartidor_nombre"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Samuel Rodriguez"
+                    android:textColor="@android:color/black"
+                    android:textStyle="bold"/>
+
+                <TextView
+                    android:id="@+id/tv_repartidor_telefono"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Delivery 70204560"/>
+            </LinearLayout>
+
+                <ImageButton
+                    android:id="@+id/btn_chatear"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/ic_message"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:background="?attr/selectableItemBackgroundBorderless"/>
+
+                <ImageButton
+                    android:id="@+id/btn_llamar"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/ic_call"
+                    android:layout_toStartOf="@id/btn_chatear"
+                    android:layout_centerVertical="true"
+                    android:background="?attr/selectableItemBackgroundBorderless"/>
+
+            </RelativeLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

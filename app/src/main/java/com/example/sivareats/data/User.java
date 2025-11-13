@@ -40,7 +40,7 @@ public class User {
     @ColumnInfo(name = "rol")
     private String rol;
 
-    // --- Constructores ---
+    // Único constructor
     public User(@NonNull String name, @NonNull String email, @NonNull String password) {
         this.name = name;
         this.email = email;
@@ -50,8 +50,6 @@ public class User {
         this.profileImageUrl = null;
         this.rol = "USUARIO_NORMAL";
     }
-
-    public User() { }
 
     // --- Getters y Setters ---
     public long getId() { return id; }
