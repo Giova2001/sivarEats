@@ -51,6 +51,16 @@ public class User {
         this.rol = "USUARIO_NORMAL";
     }
 
+    public User() {
+        this.name = "";
+        this.email = "";
+        this.password = "";
+        this.alias = "";
+        this.telefono = "";
+        this.profileImageUrl = null;
+        this.rol = "USUARIO_NORMAL";
+    }
+
     // --- Getters y Setters ---
     public long getId() { return id; }
     public void setId(long id) { this.id = id; }
