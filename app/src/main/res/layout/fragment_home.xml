@@ -14,8 +14,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fillViewport="true"
-        android:background="#FFFFFF"
-        tools:ignore="ScrollViewCount">
+        android:background="#FFFFFF">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
@@ -70,6 +69,20 @@
                     android:textColor="#000000"
                     android:textColorHint="#888888"
                     android:textSize="16sp"/>
+
+            </LinearLayout>
+
+            <!-- Historial (NO visible en modo normal) -->
+            <LinearLayout
+                android:id="@+id/layoutHistorial"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp"
+                android:visibility="gone"
+                app:layout_constraintTop_toBottomOf="@id/layoutBuscar"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
             </LinearLayout>
 
             <!-- Línea -->
@@ -78,7 +91,7 @@
                 android:layout_width="0dp"
                 android:layout_height="1dp"
                 android:background="#DDDDDD"
-                app:layout_constraintTop_toBottomOf="@id/layoutBuscar"
+                app:layout_constraintTop_toBottomOf="@id/layoutHistorial"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"/>
 
@@ -228,161 +241,41 @@
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <!-- ======= VISTA DE BUSQUEDA OCULTA ======= -->
-    <LinearLayout
-        android:id="@+id/layoutBusqueda"
+    <!-- ============================================ -->
+    <!--     OVERLAY QUE SE SOBRE PONE AL HOME        -->
+    <!-- ============================================ -->
+    <FrameLayout
+        android:id="@+id/overlayBusqueda"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:background="#FFFFFF"
-        android:padding="16dp"
         android:visibility="gone"
-        android:elevation="10dp">
+        android:background="#80000000">
 
-        <!-- Barra de búsqueda dentro de vista oculta -->
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:orientation="horizontal"
-            android:background="@drawable/barra_busqueda_home"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="16dp">
-
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_search"
-                app:tint="#888888" />
-
-            <EditText
-                android:id="@+id/etBuscarOculto"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:hint="Buscar en SIVAR EATS"
-                android:background="@null"
-                android:paddingStart="8dp"
-                android:textColor="#000000"
-                android:textColorHint="#888888"
-                android:textSize="16sp"/>
-        </LinearLayout>
-
-        <!-- Título de búsquedas recientes -->
-        <TextView
-            android:id="@+id/tvBusquedasRecientes"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Búsquedas recientes"
-            android:textColor="#666666"
-            android:textStyle="bold"
-            android:textSize="16sp"
-            android:layout_marginBottom="8dp" />
-
-        <!-- Scroll de búsquedas recientes -->
-        <HorizontalScrollView
+            android:id="@+id/contenedorOverlay"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:scrollbars="none"
-            android:layout_marginBottom="16dp">
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:background="#FFFFFF"
+            android:elevation="12dp">
 
-            <LinearLayout
-                android:id="@+id/layoutBusquedasRecientes"
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_gravity="center_vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Pizza Peperoni"
-                    android:textColor="#444444"
-                    android:background="@drawable/barra_busqueda_home"
-                    android:paddingHorizontal="12dp"
-                    android:paddingVertical="6dp"
-                    android:layout_marginEnd="8dp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Pollo Frito"
-                    android:textColor="#444444"
-                    android:background="@drawable/barra_busqueda_home"
-                    android:paddingHorizontal="12dp"
-                    android:paddingVertical="6dp" />
-            </LinearLayout>
-        </HorizontalScrollView>
-
-        <!-- Título de categorías -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Categorías principales"
-            android:textColor="#666666"
-            android:textStyle="bold"
-            android:textSize="16sp"
-            android:layout_marginBottom="12dp" />
-
-        <!-- Cuadrícula de categorías -->
-        <GridLayout
-            android:id="@+id/gridCategorias"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:columnCount="2"
-            android:rowCount="3"
-            android:alignmentMode="alignMargins"
-            android:rowOrderPreserved="false">
+                android:text="Búsquedas recientes"
+                android:textSize="18sp"
+                android:textColor="#000000"
+                android:textStyle="bold"
+                android:paddingBottom="12dp"/>
 
             <LinearLayout
+                android:id="@+id/layoutOverlayHistorial"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_margin="8dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
+                android:orientation="vertical"/>
 
-                <ImageView
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:src="@drawable/icono_pizza"
-                    app:tint="#000000"
-                    android:layout_marginEnd="8dp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Pizza"
-                    android:textColor="#000000"
-                    android:textSize="15sp" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_margin="8dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-
-                <ImageView
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:src="@drawable/icono_pollo"
-                    app:tint="#000000"
-                    android:layout_marginEnd="8dp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Pollo"
-                    android:textColor="#000000"
-                    android:textSize="15sp" />
-            </LinearLayout>
-
-            <!-- Agrega las demás categorías igual: Hamburguesa, Sopas, Saludable, China -->
-
-        </GridLayout>
-    </LinearLayout>
-
+        </LinearLayout>
+    </FrameLayout>
 
 </FrameLayout>

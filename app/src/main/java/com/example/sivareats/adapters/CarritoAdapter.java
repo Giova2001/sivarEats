@@ -1,5 +1,6 @@
 package com.example.sivareats.adapters;
 
+import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,17 +11,27 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.sivareats.R;
-import com.example.sivareats.model.Producto;
+import com.example.sivareats.data.AppDatabase;
+import com.example.sivareats.data.cart.CartDao;
+import com.example.sivareats.data.cart.CartItem;
 import com.google.android.material.button.MaterialButton;
 
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class CarritoAdapter extends RecyclerView.Adapter<CarritoAdapter.ViewHolder> {
 
-    private List<Producto> listaProductos;
+    private List<CartItem> listaCart;
+    private OnCantidadChangeListener listener;
 
-    public CarritoAdapter(List<Producto> lista) {
-        this.listaProductos = lista;
+    private CartDao cartDao;
+
+    private ExecutorService executor = Executors.newSingleThreadExecutor();
+
+    public CarritoAdapter(Context context, List<CartItem> lista) {
+        this.listaCart = lista;
+        this.cartDao = AppDatabase.getInstance(context).cartDao();
     }
 
     @NonNull
@@ -33,30 +44,47 @@ public class CarritoAdapter extends RecyclerView.Adapter<CarritoAdapter.ViewHold
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Producto producto = listaProductos.get(position);
+        CartItem item = listaCart.get(position);
 
-        holder.tvNombre.setText(producto.getNombre());
-        holder.tvDescripcion.setText(producto.getDescripcion());
-        holder.tvPrecio.setText("$" + producto.getPrecio());
-        holder.tvCantidad.setText(String.valueOf(producto.getCantidad()));
-        holder.imgProducto.setImageResource(producto.getImagenResId());
+        holder.tvNombre.setText(item.getNombre());
+        holder.tvDescripcion.setText(item.getDescripcion());
+        holder.tvPrecio.setText("$" + String.format("%.2f", item.getPrecio()));
+        holder.tvCantidad.setText(String.valueOf(item.getCantidad()));
 
-        // Cargar imagen local
-        holder.imgProducto.setImageResource(producto.getImagenResId());
+        holder.imgProducto.setImageResource(item.getImageResId());
 
-        // Botón sumar
+        // SUMAR cantidad
         holder.btnSumar.setOnClickListener(v -> {
-            producto.setCantidad(producto.getCantidad() + 1);
-            holder.tvCantidad.setText(String.valueOf(producto.getCantidad()));
+            int nuevaCantidad = item.getCantidad() + 1;
+            item.setCantidad(nuevaCantidad);
+            holder.tvCantidad.setText(String.valueOf(nuevaCantidad));
+
+            executor.execute(() -> cartDao.update(item));
+
             if (listener != null) listener.onCantidadChanged();
         });
 
-        // Botón restar
+        // RESTAR cantidad
         holder.btnRestar.setOnClickListener(v -> {
-            int cantidad = producto.getCantidad();
-            if (cantidad > 1) {
-                producto.setCantidad(cantidad - 1);
-                holder.tvCantidad.setText(String.valueOf(producto.getCantidad()));
+            int cantidadActual = item.getCantidad();
+
+            if (cantidadActual > 1) {
+                int nuevaCantidad = cantidadActual - 1;
+                item.setCantidad(nuevaCantidad);
+                holder.tvCantidad.setText(String.valueOf(nuevaCantidad));
+
+                executor.execute(() -> cartDao.update(item));
+
+                if (listener != null) listener.onCantidadChanged();
+
+            } else {
+                int index = holder.getAdapterPosition();
+
+                executor.execute(() -> cartDao.delete(item));
+
+                listaCart.remove(index);
+                notifyItemRemoved(index);
+
                 if (listener != null) listener.onCantidadChanged();
             }
         });
@@ -64,10 +92,21 @@ public class CarritoAdapter extends RecyclerView.Adapter<CarritoAdapter.ViewHold
 
     @Override
     public int getItemCount() {
-        return listaProductos.size();
+        return listaCart.size();
+    }
+
+    // ← Necesario para CartFragment
+    public List<CartItem> getLista() {
+        return listaCart;
+    }
+
+    public void updateList(List<CartItem> nuevaLista) {
+        this.listaCart = nuevaLista;
+        notifyDataSetChanged();
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
+
         ImageView imgProducto;
         TextView tvNombre, tvDescripcion, tvPrecio, tvCantidad;
         MaterialButton btnSumar, btnRestar;
@@ -82,13 +121,11 @@ public class CarritoAdapter extends RecyclerView.Adapter<CarritoAdapter.ViewHold
             btnSumar = itemView.findViewById(R.id.btnSumar);
             btnRestar = itemView.findViewById(R.id.btnRestar);
         }
-
     }
+
     public interface OnCantidadChangeListener {
         void onCantidadChanged();
     }
-
-    private OnCantidadChangeListener listener;
 
     public void setOnCantidadChangeListener(OnCantidadChangeListener listener) {
         this.listener = listener;

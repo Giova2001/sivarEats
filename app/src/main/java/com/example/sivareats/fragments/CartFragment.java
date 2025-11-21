@@ -1,25 +1,35 @@
 package com.example.sivareats.fragments;
 
 import android.os.Bundle;
+
+import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Observer;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
 import com.example.sivareats.R;
 import com.example.sivareats.adapters.CarritoAdapter;
-import com.example.sivareats.model.Producto;
+import com.example.sivareats.data.AppDatabase;
+import com.example.sivareats.data.cart.CartItem;
+import com.example.sivareats.data.cart.CartDao;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class CartFragment extends Fragment {
 
-    public CartFragment() { }
+    private RecyclerView recyclerView;
+    private CarritoAdapter adapter;
+    private TextView tvSubtotal, tvDelivery, tvTotal;
+
+    private CartDao cartDao;
+
+    public CartFragment() {}
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -27,49 +37,46 @@ public class CartFragment extends Fragment {
 
         View view = inflater.inflate(R.layout.fragment_cart, container, false);
 
-        RecyclerView recyclerCarrito = view.findViewById(R.id.recyclerCarrito);
-        recyclerCarrito.setLayoutManager(new LinearLayoutManager(getContext()));
+        recyclerView = view.findViewById(R.id.recyclerCarrito);
+        recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
 
-        // Crear lista de productos
-        List<Producto> productos = new ArrayList<>();
-        productos.add(new Producto("Combo Super Campero",
-                "Tres piezas de pollo más una ensalada y un pan",
-                R.drawable.campero1,
-                7.50,
-                1));
-        productos.add(new Producto("Pizza Pepperoni",
-                "Pizza grande con extra de pepperoni",
-                R.drawable.pizza1,
-                12.00,
-                1));
+        tvSubtotal = view.findViewById(R.id.tvSubtotal);
+        tvDelivery = view.findViewById(R.id.tvDelivery);
+        tvTotal = view.findViewById(R.id.tvTotal);
 
-        CarritoAdapter adapter = new CarritoAdapter(productos);
-        recyclerCarrito.setAdapter(adapter);
+        cartDao = AppDatabase.getInstance(requireContext()).cartDao();
 
-        // Listener para actualizar totales
-        adapter.setOnCantidadChangeListener(() -> actualizarTotales(productos, view));
+        // Adapter con lista vacía
+        adapter = new CarritoAdapter(getContext(), new ArrayList<>());
+        recyclerView.setAdapter(adapter);
 
-        // Llamada inicial para mostrar totales al cargar el fragment
-        actualizarTotales(productos, view);
+        // Cuando cambia cantidad → recalcula totales
+        adapter.setOnCantidadChangeListener(() -> actualizarTotales(adapter.getLista()));
+
+        // Observer del carrito usando getAllLive()
+        cartDao.getAllLive().observe(getViewLifecycleOwner(), new Observer<List<CartItem>>() {
+            @Override
+            public void onChanged(List<CartItem> cartItems) {
+                adapter.updateList(cartItems);
+                actualizarTotales(cartItems);
+            }
+        });
 
         return view;
     }
-    private void actualizarTotales(List<Producto> productos, View view) {
+
+    private void actualizarTotales(List<CartItem> cartItems) {
         double subtotal = 0;
-        for (Producto p : productos) {
+
+        for (CartItem p : cartItems) {
             subtotal += p.getPrecio() * p.getCantidad();
         }
 
-        double delivery = 2.50; // calcular dinámicamente o dejar fijo
+        double delivery = 1.50;
         double total = subtotal + delivery;
-
-        TextView tvSubtotal = view.findViewById(R.id.tvSubtotal);
-        TextView tvDelivery = view.findViewById(R.id.tvDelivery);
-        TextView tvTotal = view.findViewById(R.id.tvTotal);
 
         tvSubtotal.setText("Subtotal: $" + String.format("%.2f", subtotal));
         tvDelivery.setText("Delivery: $" + String.format("%.2f", delivery));
         tvTotal.setText("Total: $" + String.format("%.2f", total));
     }
-
 }

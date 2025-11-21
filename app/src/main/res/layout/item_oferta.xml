@@ -29,13 +29,13 @@
 
         <LinearLayout
             android:id="@+id/layoutInfo"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
+            android:layout_width="197dp"
+            android:layout_height="152dp"
             android:orientation="vertical"
             android:padding="8dp"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/imgProductoOferta">
 
             <TextView
@@ -43,30 +43,42 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Combo Super Campero"
+                android:textColor="#000000"
                 android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="#000000"/>
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/txtDescripcionProducto"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Descripción breve del producto"
-                android:textColor="#666666"
-                android:textSize="13sp"
                 android:ellipsize="end"
                 android:maxLines="2"
-                android:paddingTop="4dp"/>
+                android:paddingTop="4dp"
+                android:text="Descripción breve del producto"
+                android:textColor="#666666"
+                android:textSize="13sp" />
 
             <TextView
                 android:id="@+id/tvPrecioProductoOferta"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
                 android:text="$7.50"
-                android:textSize="14sp"
-                android:textStyle="bold"
                 android:textColor="#1F41EC"
-                android:layout_marginTop="8dp"/>
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAgregarCarrito"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginTop="10dp"
+                android:text="Agregar"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                app:backgroundTint="#1F41EC"
+                app:cornerRadius="12dp" />
+
         </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
