@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FCF5FD"
+    android:padding="12dp">
+
+    <!-- Barra superior -->
+    <LinearLayout
+        android:id="@+id/layoutSuperior"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:id="@+id/btnBackEnvio"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:src="@drawable/ic_return"
+            android:padding="4dp" />
+
+        <TextView
+            android:id="@+id/tituloEnvio"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="ENVÍO"
+            android:textAlignment="center"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/black"/>
+    </LinearLayout>
+
+    <!-- Texto Enviar a -->
+    <TextView
+        android:id="@+id/textEnviarA"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Enviar a:"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/layoutSuperior"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <!-- Direcciones guardadas -->
+    <LinearLayout
+        android:id="@+id/layoutDirecciones"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="8dp"
+        android:layout_marginTop="8dp"
+        app:layout_constraintTop_toBottomOf="@id/textEnviarA"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Dirección Casa -->
+        <LinearLayout
+            android:id="@+id/opCasa"
+            android:layout_width="match_parent"
+            android:layout_height="55dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="8dp"
+            android:background="@drawable/caja_direccion">
+
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_home" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Casa"
+                android:textSize="16sp"
+                android:layout_marginStart="12dp"/>
+        </LinearLayout>
+
+        <!-- Dirección Oficina -->
+        <LinearLayout
+            android:id="@+id/opOficina"
+            android:layout_width="match_parent"
+            android:layout_height="55dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="8dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/caja_direccion">
+
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_star" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Oficina"
+                android:textSize="16sp"
+                android:layout_marginStart="12dp"/>
+        </LinearLayout>
+
+        <!-- Agregar ubicación -->
+        <LinearLayout
+            android:id="@+id/opAgregar"
+            android:layout_width="match_parent"
+            android:layout_height="55dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="8dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/caja_direccion">
+
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_addcircle" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Añadir ubicación"
+                android:textSize="16sp"
+                android:layout_marginStart="12dp"/>
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- CONTENEDOR DEL MAPA + BOTÓN MI UBICACIÓN -->
+    <FrameLayout
+        android:id="@+id/mapContainer"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/layoutDirecciones"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/btnConfirmarEnvio">
+
+        <fragment
+            android:id="@+id/mapEnvio"
+            android:name="com.google.android.gms.maps.SupportMapFragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <!-- Botón MI UBICACIÓN dentro del mapa -->
+        <ImageView
+            android:id="@+id/btnMiUbicacion"
+            android:layout_width="55dp"
+            android:layout_height="55dp"
+            android:src="@drawable/ic_location_24"
+            android:padding="10dp"
+            android:layout_margin="16dp"
+            android:background="@drawable/caja_direccion"
+            android:elevation="10dp"
+            android:layout_gravity="bottom|end"/>
+    </FrameLayout>
+
+    <!-- Botón final -->
+    <Button
+        android:id="@+id/btnConfirmarEnvio"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Confirmar y proceder al pago"
+        android:textSize="16sp"
+        android:textColor="@android:color/white"
+        android:backgroundTint="#1F41EC"
+        android:layout_marginTop="14dp"
+        android:layout_marginBottom="10dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+</androidx.constraintlayout.widget.ConstraintLayout>

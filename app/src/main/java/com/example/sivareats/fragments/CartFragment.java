@@ -1,7 +1,6 @@
 package com.example.sivareats.fragments;
 
 import android.os.Bundle;
-
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -10,6 +9,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TextView;
 
 import com.example.sivareats.R;
@@ -29,6 +29,8 @@ public class CartFragment extends Fragment {
 
     private CartDao cartDao;
 
+    private Button btnConfirmar;
+
     public CartFragment() {}
 
     @Override
@@ -44,16 +46,15 @@ public class CartFragment extends Fragment {
         tvDelivery = view.findViewById(R.id.tvDelivery);
         tvTotal = view.findViewById(R.id.tvTotal);
 
+        btnConfirmar = view.findViewById(R.id.btnConfirmar);
+
         cartDao = AppDatabase.getInstance(requireContext()).cartDao();
 
-        // Adapter con lista vacía
         adapter = new CarritoAdapter(getContext(), new ArrayList<>());
         recyclerView.setAdapter(adapter);
 
-        // Cuando cambia cantidad → recalcula totales
         adapter.setOnCantidadChangeListener(() -> actualizarTotales(adapter.getLista()));
 
-        // Observer del carrito usando getAllLive()
         cartDao.getAllLive().observe(getViewLifecycleOwner(), new Observer<List<CartItem>>() {
             @Override
             public void onChanged(List<CartItem> cartItems) {
@@ -62,7 +63,20 @@ public class CartFragment extends Fragment {
             }
         });
 
+        // 👉 AQUÍ ABRIMOS EL FRAGMENT DE ENVÍO
+        btnConfirmar.setOnClickListener(v -> abrirEnvio());
+
         return view;
+    }
+
+    private void abrirEnvio() {
+        EnvioFragment envioFragment = new EnvioFragment();
+
+        requireActivity().getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.fragment_container, envioFragment)
+                .addToBackStack(null)
+                .commit();
     }
 
     private void actualizarTotales(List<CartItem> cartItems) {
