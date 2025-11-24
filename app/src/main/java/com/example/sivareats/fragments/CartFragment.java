@@ -74,7 +74,8 @@ public class CartFragment extends Fragment {
 
         requireActivity().getSupportFragmentManager()
                 .beginTransaction()
-                .replace(R.id.fragment_container, envioFragment)
+                .hide(this) // Ocultar el CartFragment actual
+                .add(R.id.fragment_container, envioFragment, "EnvioFragment")
                 .addToBackStack(null)
                 .commit();
     }

@@ -142,21 +142,23 @@ public class NavegacionActivity extends AppCompatActivity {
         String fragmentTag = fragment.getClass().getSimpleName();
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
 
+        // Ocultar TODOS los fragmentos visibles en el contenedor
+        // Esto asegura que fragmentos secundarios como EnvioFragment también se oculten
+        for (Fragment frag : getSupportFragmentManager().getFragments()) {
+            if (frag != null && frag.isVisible()) {
+                transaction.hide(frag);
+            }
+        }
+
         // Buscar si el fragment ya existe
         Fragment existingFragment = getSupportFragmentManager().findFragmentByTag(fragmentTag);
 
         if (existingFragment != null) {
             // Si existe, mostrarlo
-            if (activeFragment != null) {
-                transaction.hide(activeFragment);
-            }
             transaction.show(existingFragment);
             activeFragment = existingFragment;
         } else {
             // Si no existe, añadirlo
-            if (activeFragment != null) {
-                transaction.hide(activeFragment);
-            }
             transaction.add(R.id.fragment_container, fragment, fragmentTag);
             activeFragment = fragment;
         }

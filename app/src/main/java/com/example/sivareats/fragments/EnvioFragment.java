@@ -1,6 +1,7 @@
 package com.example.sivareats.fragments;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
@@ -8,6 +9,7 @@ import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
 
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,6 +20,7 @@ import android.widget.Toast;
 
 import com.example.sivareats.R;
 import com.example.sivareats.ui.NavegacionActivity;
+import com.example.sivareats.ui.checkout.SeleccionarMetodoPagoActivity;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -55,11 +58,25 @@ public class EnvioFragment extends Fragment implements OnMapReadyCallback {
 
         // Regresar al carrito
         btnBack.setOnClickListener(v -> {
-            requireActivity().getSupportFragmentManager()
-                    .beginTransaction()
-                    .replace(R.id.fragment_container, new CartFragment())
-                    .addToBackStack(null)
-                    .commit();
+            FragmentManager fragmentManager = requireActivity().getSupportFragmentManager();
+
+            // Intentar usar popBackStack primero
+            if (fragmentManager.getBackStackEntryCount() > 0) {
+                fragmentManager.popBackStack();
+            } else {
+                // Si no hay back stack, buscar y mostrar el CartFragment
+                Fragment cartFragment = fragmentManager.findFragmentByTag("CartFragment");
+                if (cartFragment != null && !cartFragment.isVisible()) {
+                    fragmentManager.beginTransaction()
+                            .hide(this)
+                            .show(cartFragment)
+                            .commit();
+                } else {
+                    // Si no existe o no se puede mostrar, usar popBackStack o navegar
+                    // Esto debería funcionar con la nueva implementación de loadFragment
+                    fragmentManager.popBackStackImmediate();
+                }
+            }
         });
 
         // Accion del mapa
@@ -72,7 +89,7 @@ public class EnvioFragment extends Fragment implements OnMapReadyCallback {
         // Botón Mi Ubicación (YA dentro del mapa)
         btnMiUbicacion.setOnClickListener(v -> centrarEnMiUbicacion());
 
-        // Confirmar ubicacion
+        // Confirmar ubicacion y proceder al pago
         btnConfirmar.setOnClickListener(v -> {
             if (selectedMarker == null) {
                 Toast.makeText(requireContext(),
@@ -81,11 +98,12 @@ public class EnvioFragment extends Fragment implements OnMapReadyCallback {
                 return;
             }
 
-            LatLng punto = selectedMarker.getPosition();
-            String mensaje = "Ubicación enviada al pago:\n" +
-                    "Lat: " + punto.latitude + "\nLng: " + punto.longitude;
-
-            Toast.makeText(requireContext(), mensaje, Toast.LENGTH_LONG).show();
+            // Abrir activity de selección de método de pago
+            Intent intent = new Intent(requireContext(), SeleccionarMetodoPagoActivity.class);
+            // Opcional: pasar la ubicación seleccionada como extra
+            intent.putExtra("latitud", selectedMarker.getPosition().latitude);
+            intent.putExtra("longitud", selectedMarker.getPosition().longitude);
+            startActivity(intent);
         });
 
         return view;
@@ -150,4 +168,3 @@ public class EnvioFragment extends Fragment implements OnMapReadyCallback {
                 });
     }
 }
-

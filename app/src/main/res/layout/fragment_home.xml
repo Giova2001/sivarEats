@@ -112,6 +112,7 @@
                     android:orientation="horizontal">
 
                     <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCategoriaRestaurantes"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Restaurantes"
@@ -125,6 +126,7 @@
                         android:layout_marginEnd="12dp"/>
 
                     <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCategoriaFavoritos"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         app:icon="@drawable/ic_corazon"
@@ -138,6 +140,7 @@
                         android:textColor="#000000"/>
 
                     <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCategoriaChina"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         app:icon="@drawable/ic_china"
@@ -151,6 +154,7 @@
                         android:textColor="#000000"/>
 
                     <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCategoriaPizza"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         app:icon="@drawable/ic_pizza"
@@ -237,6 +241,49 @@
                     android:paddingEnd="4dp"
                     android:clipToPadding="false"/>
             </HorizontalScrollView>
+
+            <!-- Botón Todo -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnTodo"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:text="Todo"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                app:cornerRadius="14dp"
+                app:backgroundTint="#1F41EC"
+                app:layout_constraintTop_toBottomOf="@id/scrollRecomendados"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:layout_marginTop="16dp"/>
+
+            <!-- Contenedor de Restaurantes (Todo) -->
+            <LinearLayout
+                android:id="@+id/layoutTodo"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                app:layout_constraintTop_toBottomOf="@id/btnTodo"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:layout_marginTop="16dp"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"/>
+
+            <!-- Vista de Restaurantes Agrupados (se muestra cuando se selecciona Restaurantes) -->
+            <LinearLayout
+                android:id="@+id/layoutRestaurantesAgrupados"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                app:layout_constraintTop_toBottomOf="@id/scrollCategorias"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:layout_marginTop="16dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"/>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.core.widget.NestedScrollView>

@@ -37,6 +37,9 @@
             android:name=".ui.profile.PaymentMethodActivity"
             android:exported="false" />
         <activity
+            android:name=".ui.checkout.SeleccionarMetodoPagoActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.profile.LocationEditActivity"
             android:exported="false" />
         <activity
