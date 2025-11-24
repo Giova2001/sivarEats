@@ -1,9 +1,16 @@
 package com.example.sivareats.ui.profile;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.MenuItem;
 import android.widget.Button;
@@ -11,12 +18,17 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.room.Room;
 
 import com.bumptech.glide.Glide;
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import com.example.sivareats.R;
 import com.example.sivareats.data.AppDatabase;
 import com.example.sivareats.data.User;
@@ -24,6 +36,11 @@ import com.example.sivareats.data.UserDao;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -42,6 +59,10 @@ public class EditProfileActivity extends AppCompatActivity {
     private User currentUser;
 
     private String userEmail;
+    private Cloudinary cloudinary;
+    private static final int REQUEST_CODE_PICK_IMAGE = 100;
+    private static final int REQUEST_CODE_PERMISSION = 101;
+    private Uri selectedImageUri;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -83,11 +104,265 @@ public class EditProfileActivity extends AppCompatActivity {
             return;
         }
 
+        // --- Inicializar Cloudinary ---
+        initCloudinary();
+
         // --- Cargar usuario ---
         loadUserFromFirestore(userEmail);
 
         // --- Guardar cambios ---
         btnGuardar.setOnClickListener(v -> saveChanges());
+
+        // --- Cambiar foto ---
+        btnCambiarFoto.setOnClickListener(v -> requestImagePermission());
+    }
+
+    // === Inicializar Cloudinary ===
+    private void initCloudinary() {
+        try {
+            Map<String, Object> config = new HashMap<>();
+            // Credenciales de Cloudinary
+            String cloudName = "dpjadtypv";
+            String apiKey = "863696682844582";
+            String apiSecret = "4eFE6ozxIG26OXHSmzcsKBYvma0";
+            
+            config.put("cloud_name", cloudName);
+            config.put("api_key", apiKey);
+            config.put("api_secret", apiSecret);
+            
+            cloudinary = new Cloudinary(config);
+            Log.d("EditProfile", "Cloudinary inicializado correctamente con cloud_name: " + cloudName);
+        } catch (Exception e) {
+            Log.e("EditProfile", "Error al inicializar Cloudinary", e);
+            e.printStackTrace();
+            cloudinary = null;
+        }
+    }
+
+    // === Solicitar permiso para leer imágenes ===
+    private void requestImagePermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) 
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, 
+                    new String[]{Manifest.permission.READ_MEDIA_IMAGES}, 
+                    REQUEST_CODE_PERMISSION);
+            } else {
+                openImagePicker();
+            }
+        } else {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) 
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, 
+                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 
+                    REQUEST_CODE_PERMISSION);
+            } else {
+                openImagePicker();
+            }
+        }
+    }
+
+    // === Abrir selector de imágenes ===
+    private void openImagePicker() {
+        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        startActivityForResult(intent, REQUEST_CODE_PICK_IMAGE);
+    }
+
+    // === Manejar resultado de permisos ===
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_CODE_PERMISSION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                openImagePicker();
+            } else {
+                Toast.makeText(this, "Se necesita permiso para seleccionar imágenes", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    // === Manejar resultado de selección de imagen ===
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_CODE_PICK_IMAGE && resultCode == RESULT_OK && data != null) {
+            selectedImageUri = data.getData();
+            if (selectedImageUri != null) {
+                // Mostrar imagen seleccionada
+                imgProfile.setImageURI(selectedImageUri);
+                // Subir imagen a Cloudinary
+                uploadImageToCloudinary(selectedImageUri);
+            }
+        }
+    }
+
+    // === Subir imagen a Cloudinary ===
+    private void uploadImageToCloudinary(Uri imageUri) {
+        // Verificar que Cloudinary esté inicializado
+        if (cloudinary == null) {
+            Toast.makeText(this, "Error: Cloudinary no está configurado. Por favor configura tus credenciales en initCloudinary().", Toast.LENGTH_LONG).show();
+            Log.e("EditProfile", "Cloudinary es null - verifica initCloudinary()");
+            btnCambiarFoto.setEnabled(true);
+            btnCambiarFoto.setText("Cambiar imagen");
+            return;
+        }
+        
+        // Verificar que las credenciales no sean las de ejemplo
+        // Esto es una verificación básica - el usuario debe configurar las credenciales reales
+        
+        try {
+            // Mostrar indicador de carga
+            btnCambiarFoto.setEnabled(false);
+            btnCambiarFoto.setText("Subiendo...");
+            
+            // Convertir URI a Bitmap
+            Bitmap bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), imageUri);
+            
+            // Redimensionar imagen si es muy grande (máximo 1024px)
+            int maxSize = 1024;
+            int width = bitmap.getWidth();
+            int height = bitmap.getHeight();
+            if (width > maxSize || height > maxSize) {
+                float scale = Math.min((float) maxSize / width, (float) maxSize / height);
+                int newWidth = Math.round(width * scale);
+                int newHeight = Math.round(height * scale);
+                bitmap = Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true);
+            }
+            
+            // Crear archivo temporal para la imagen
+            File tempFile = null;
+            try {
+                // Crear archivo temporal
+                tempFile = File.createTempFile("profile_image_", ".jpg", getCacheDir());
+                FileOutputStream fos = new FileOutputStream(tempFile);
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 85, fos);
+                fos.flush();
+                fos.close();
+                
+                Log.d("EditProfile", "Archivo temporal creado: " + tempFile.getAbsolutePath());
+            } catch (IOException e) {
+                Log.e("EditProfile", "Error al crear archivo temporal", e);
+                Toast.makeText(this, "Error al procesar la imagen", Toast.LENGTH_SHORT).show();
+                btnCambiarFoto.setEnabled(true);
+                btnCambiarFoto.setText("Cambiar imagen");
+                return;
+            }
+            
+            // Crear copias finales para usar en lambda
+            final Cloudinary finalCloudinary = cloudinary;
+            final String finalUserEmail = userEmail;
+            final File finalTempFile = tempFile;
+            
+            Log.d("EditProfile", "Tamaño de archivo: " + finalTempFile.length() + " bytes");
+            
+            // Subir en un hilo separado
+            ioExecutor.execute(() -> {
+                try {
+                    // Crear public_id único
+                    final String publicId = "profile_" + finalUserEmail.replace("@", "_").replace(".", "_");
+                    
+                    Log.d("EditProfile", "Iniciando subida a Cloudinary con public_id: " + publicId);
+                    Log.d("EditProfile", "Cloudinary config: " + (finalCloudinary != null ? "OK" : "NULL"));
+                    
+                    // Verificar credenciales antes de subir
+                    if (finalCloudinary == null) {
+                        throw new Exception("Cloudinary no está inicializado");
+                    }
+                    
+                    // Subir archivo a Cloudinary (método más confiable)
+                    Map<String, Object> uploadResult = finalCloudinary.uploader().upload(finalTempFile, 
+                        ObjectUtils.asMap(
+                            "folder", "profile_images",
+                            "public_id", publicId,
+                            "overwrite", true,
+                            "resource_type", "image"
+                        ));
+                    
+                    Log.d("EditProfile", "Respuesta de Cloudinary: " + uploadResult.toString());
+                    
+                    // Eliminar archivo temporal después de subir
+                    if (finalTempFile.exists()) {
+                        finalTempFile.delete();
+                    }
+                    
+                    // Obtener URL de la imagen
+                    String imageUrl = (String) uploadResult.get("secure_url");
+                    if (imageUrl == null) {
+                        imageUrl = (String) uploadResult.get("url");
+                    }
+                    
+                    // Crear copia final para usar en lambda
+                    final String finalImageUrl = imageUrl;
+                    final User finalCurrentUser = currentUser;
+                    final EditProfileActivity activity = EditProfileActivity.this;
+                    
+                    Log.d("EditProfile", "URL de imagen obtenida: " + finalImageUrl);
+                    
+                    // Actualizar en el hilo principal
+                    runOnUiThread(() -> {
+                        if (finalCurrentUser != null && finalImageUrl != null && !finalImageUrl.isEmpty()) {
+                            finalCurrentUser.setProfileImageUrl(finalImageUrl);
+                            loadImage(finalImageUrl);
+                            
+                            // Guardar en base de datos local
+                            ioExecutor.execute(() -> userDao.update(finalCurrentUser));
+                            
+                            // Actualizar en Firestore si hay conexión
+                            if (isConnected()) {
+                                Map<String, Object> updates = new HashMap<>();
+                                updates.put("profile_image_url", finalImageUrl);
+                                db.collection("users").document(finalCurrentUser.getEmail())
+                                        .update(updates)
+                                        .addOnSuccessListener(aVoid -> 
+                                            Log.d("EditProfile", "Imagen actualizada en Firestore"))
+                                        .addOnFailureListener(e -> 
+                                            Log.e("EditProfile", "Error al actualizar imagen en Firestore", e));
+                            }
+                            
+                            Toast.makeText(activity, "Imagen actualizada correctamente", Toast.LENGTH_SHORT).show();
+                        } else {
+                            Log.e("EditProfile", "URL de imagen es null o vacía");
+                            Toast.makeText(activity, "Error: No se pudo obtener la URL de la imagen", Toast.LENGTH_SHORT).show();
+                        }
+                        btnCambiarFoto.setEnabled(true);
+                        btnCambiarFoto.setText("Cambiar imagen");
+                    });
+                } catch (Exception e) {
+                    Log.e("EditProfile", "Error al subir imagen a Cloudinary", e);
+                    e.printStackTrace();
+                    
+                    // Eliminar archivo temporal en caso de error
+                    if (finalTempFile != null && finalTempFile.exists()) {
+                        finalTempFile.delete();
+                    }
+                    
+                    final Exception finalException = e;
+                    final EditProfileActivity activity = EditProfileActivity.this;
+                    runOnUiThread(() -> {
+                        String errorMsg = "Error al subir la imagen";
+                        if (finalException.getMessage() != null) {
+                            String msg = finalException.getMessage();
+                            // Mostrar mensaje más amigable
+                            if (msg.contains("401") || msg.contains("Unauthorized")) {
+                                errorMsg = "Credenciales de Cloudinary incorrectas. Verifica tu configuración.";
+                            } else if (msg.contains("400") || msg.contains("Bad Request")) {
+                                errorMsg = "Error en la solicitud. Verifica el formato de la imagen.";
+                            } else {
+                                errorMsg += ": " + msg;
+                            }
+                        }
+                        Toast.makeText(activity, errorMsg, Toast.LENGTH_LONG).show();
+                        btnCambiarFoto.setEnabled(true);
+                        btnCambiarFoto.setText("Cambiar imagen");
+                    });
+                }
+            });
+        } catch (IOException e) {
+            Log.e("EditProfile", "Error al leer imagen", e);
+            Toast.makeText(this, "Error al leer la imagen", Toast.LENGTH_SHORT).show();
+            btnCambiarFoto.setEnabled(true);
+            btnCambiarFoto.setText("Cambiar imagen");
+        }
     }
 
     // === Cargar usuario desde Firestore ===
