@@ -13,6 +13,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.fragment.app.Fragment;
 
 import com.example.sivareats.R;
@@ -28,9 +29,14 @@ public class HomeFragment extends Fragment {
 
     private static final String TAG = "HomeFragment";
     private SearchHistoryManager searchHistoryManager;
+    private OnBackPressedCallback onBackPressedCallback;
 
     private FrameLayout overlayBusqueda;
     private LinearLayout overlayHistorial;
+    private LinearLayout layoutResultadosBusqueda;
+    private EditText etBuscarOverlay;
+    private TextView tvResultadosTitulo;
+    private TextView tvHistorialTitulo;
     private CartViewModel cartViewModel;
 
     // Botones de categorías
@@ -38,6 +44,9 @@ public class HomeFragment extends Fragment {
     private MaterialButton btnFavoritos;
     private MaterialButton btnChina;
     private MaterialButton btnPizza;
+
+    // Lista completa de todos los productos para búsqueda
+    private List<Producto> todosLosProductos;
 
     // Contenedores de productos
     private LinearLayout layoutOfertas;
@@ -89,11 +98,35 @@ public class HomeFragment extends Fragment {
             // Overlay
             overlayBusqueda = view.findViewById(R.id.overlayBusqueda);
             overlayHistorial = view.findViewById(R.id.layoutOverlayHistorial);
+            layoutResultadosBusqueda = view.findViewById(R.id.layoutResultadosBusqueda);
+            etBuscarOverlay = view.findViewById(R.id.etBuscarOverlay);
+            tvResultadosTitulo = view.findViewById(R.id.tvResultadosTitulo);
+            tvHistorialTitulo = view.findViewById(R.id.tvHistorialTitulo);
 
             searchHistoryManager = new SearchHistoryManager(requireContext());
 
-            // Mostrar overlay
-            barraBusqueda.setOnClickListener(v -> mostrarOverlay(inflater));
+            // Cargar todas las listas de productos PRIMERO
+            todasLasOfertas = obtenerTodasLasOfertas();
+            todosLosRecomendados = obtenerTodosLosRecomendados();
+
+            // Crear lista completa de productos para búsqueda DESPUÉS de cargar las listas
+            todosLosProductos = new ArrayList<>();
+            todosLosProductos.addAll(todasLasOfertas);
+            todosLosProductos.addAll(todosLosRecomendados);
+
+            // Mostrar overlay al hacer clic en la barra de búsqueda
+            barraBusqueda.setOnFocusChangeListener((v, hasFocus) -> {
+                if (hasFocus) {
+                    mostrarOverlay(inflater);
+                }
+            });
+            barraBusqueda.setOnClickListener(v -> {
+                barraBusqueda.requestFocus();
+                mostrarOverlay(inflater);
+            });
+
+            // Configurar búsqueda en el overlay
+            configurarBusquedaOverlay(inflater);
 
             // Guardar historial al presionar enter
             barraBusqueda.setOnEditorActionListener((v, actionId, event) -> {
@@ -107,21 +140,36 @@ public class HomeFragment extends Fragment {
                 return true;
             });
 
-            // Ocultar overlay al presionar fuera
-            overlayBusqueda.setOnClickListener(v -> overlayBusqueda.setVisibility(View.GONE));
+            // Ocultar overlay al presionar en el fondo
+            overlayBusqueda.setOnClickListener(v -> {
+                // Solo cerrar si se hace clic directamente en el FrameLayout (fondo)
+                if (v.getId() == R.id.overlayBusqueda) {
+                    ocultarOverlay();
+                }
+            });
+
+            // Evitar que el clic se propague desde el contenedor
+            View contenedorOverlay = view.findViewById(R.id.contenedorOverlay);
+            if (contenedorOverlay != null) {
+                contenedorOverlay.setOnClickListener(v -> {
+                    // Consumir el evento para que no se propague al overlay
+                });
+            }
+
+            // Los listeners de categorías se configuran cuando se muestra el overlay
+            // No se configuran aquí porque las vistas del overlay pueden no estar disponibles
 
             // Configurar listeners de botones de categorías
             setupCategoriaButtons(inflater);
-
-            // Cargar todas las listas de productos
-            todasLasOfertas = obtenerTodasLasOfertas();
-            todosLosRecomendados = obtenerTodosLosRecomendados();
 
             // Mostrar productos iniciales (todos)
             actualizarProductos(inflater);
 
             // Mostrar restaurantes en sección Todo
             mostrarRestaurantes(inflater);
+
+            // Configurar manejo del botón atrás para cerrar el overlay
+            configurarManejoBotonAtras();
 
             return view;
 
@@ -134,15 +182,149 @@ public class HomeFragment extends Fragment {
 
 
     private void mostrarOverlay(LayoutInflater inflater) {
-        overlayBusqueda.setVisibility(View.VISIBLE);
-        overlayHistorial.removeAllViews();
+        if (overlayBusqueda == null) {
+            Log.e(TAG, "overlayBusqueda es null, no se puede mostrar");
+            return;
+        }
 
+        overlayBusqueda.setVisibility(View.VISIBLE);
+
+        // Habilitar el callback del botón atrás cuando se muestra el overlay
+        if (onBackPressedCallback != null) {
+            onBackPressedCallback.setEnabled(true);
+        }
+
+        // Limpiar resultados anteriores
+        if (layoutResultadosBusqueda != null) {
+            layoutResultadosBusqueda.removeAllViews();
+            layoutResultadosBusqueda.setVisibility(View.GONE);
+        }
+        if (tvResultadosTitulo != null) {
+            tvResultadosTitulo.setVisibility(View.GONE);
+        }
+
+        // Mostrar historial y configurar categorías
+        cargarHistorialBusqueda(inflater);
+        cargarCategoriasBuscadas(inflater);
+
+        // Asegurar que el historial y las categorías estén visibles
+        if (tvHistorialTitulo != null) {
+            tvHistorialTitulo.setVisibility(View.VISIBLE);
+        }
+        if (overlayHistorial != null) {
+            overlayHistorial.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void ocultarOverlay() {
+        if (overlayBusqueda != null) {
+            overlayBusqueda.setVisibility(View.GONE);
+        }
+        if (etBuscarOverlay != null) {
+            etBuscarOverlay.setText("");
+        }
+        if (layoutResultadosBusqueda != null) {
+            layoutResultadosBusqueda.setVisibility(View.GONE);
+        }
+        if (tvResultadosTitulo != null) {
+            tvResultadosTitulo.setVisibility(View.GONE);
+        }
+
+        // Deshabilitar el callback del botón atrás cuando se oculta el overlay
+        if (onBackPressedCallback != null) {
+            onBackPressedCallback.setEnabled(false);
+        }
+
+        // Ocultar el teclado
+        if (etBuscarOverlay != null && getActivity() != null) {
+            android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager)
+                    getActivity().getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+            if (imm != null) {
+                imm.hideSoftInputFromWindow(etBuscarOverlay.getWindowToken(), 0);
+            }
+        }
+    }
+
+    private void configurarManejoBotonAtras() {
+        // Crear callback para manejar el botón atrás
+        // Inicialmente deshabilitado, se habilitará cuando se muestre el overlay
+        onBackPressedCallback = new OnBackPressedCallback(false) {
+            @Override
+            public void handleOnBackPressed() {
+                // Cerrar el overlay cuando se presiona el botón atrás
+                ocultarOverlay();
+            }
+        };
+
+        // Registrar el callback
+        requireActivity().getOnBackPressedDispatcher().addCallback(getViewLifecycleOwner(), onBackPressedCallback);
+    }
+
+    private void cargarCategoriasBuscadas(LayoutInflater inflater) {
+        // Configurar listeners de categorías cuando se muestra el overlay
+        // Buscar las vistas dentro del overlay directamente
+        if (overlayBusqueda == null) {
+            Log.e(TAG, "overlayBusqueda es null en cargarCategoriasBuscadas");
+            return;
+        }
+
+        View cardPollo = overlayBusqueda.findViewById(R.id.cardPollo);
+        View cardPizza = overlayBusqueda.findViewById(R.id.cardPizza);
+        View cardHamburguesa = overlayBusqueda.findViewById(R.id.cardHamburguesa);
+        View cardChina = overlayBusqueda.findViewById(R.id.cardChina);
+
+        Log.d(TAG, "Configurando listeners de categorías. Pollo: " + (cardPollo != null) +
+                ", Pizza: " + (cardPizza != null) +
+                ", Hamburguesa: " + (cardHamburguesa != null) +
+                ", China: " + (cardChina != null));
+
+        if (cardPollo != null) {
+            cardPollo.setOnClickListener(v -> {
+                Log.d(TAG, "Categoría Pollo presionada");
+                buscarPorCategoria("pollo", inflater);
+            });
+        } else {
+            Log.e(TAG, "ERROR: cardPollo no encontrado en overlay");
+        }
+
+        if (cardPizza != null) {
+            cardPizza.setOnClickListener(v -> {
+                Log.d(TAG, "Categoría Pizza presionada");
+                buscarPorCategoria("pizza", inflater);
+            });
+        } else {
+            Log.e(TAG, "ERROR: cardPizza no encontrado en overlay");
+        }
+
+        if (cardHamburguesa != null) {
+            cardHamburguesa.setOnClickListener(v -> {
+                Log.d(TAG, "Categoría Hamburguesa presionada");
+                buscarPorCategoria("hamburguesa", inflater);
+            });
+        } else {
+            Log.e(TAG, "ERROR: cardHamburguesa no encontrado en overlay");
+        }
+
+        if (cardChina != null) {
+            cardChina.setOnClickListener(v -> {
+                Log.d(TAG, "Categoría China presionada");
+                buscarPorCategoria("china", inflater);
+            });
+        } else {
+            Log.e(TAG, "ERROR: cardChina no encontrado en overlay");
+        }
+    }
+
+    private void cargarHistorialBusqueda(LayoutInflater inflater) {
+        overlayHistorial.removeAllViews();
         List<String> historial = searchHistoryManager.getHistory();
 
         if (historial.isEmpty()) {
             TextView t = new TextView(getContext());
             t.setText("Sin búsquedas recientes");
-            t.setTextSize(16);
+            t.setTextSize(14);
+            t.setTextColor(0xFF888888);
+            t.setPadding(0, 8, 0, 8);
             overlayHistorial.addView(t);
             return;
         }
@@ -153,11 +335,268 @@ public class HomeFragment extends Fragment {
             txt.setText(h);
 
             row.setOnClickListener(v -> {
-                Toast.makeText(getContext(), "Buscando: " + h, Toast.LENGTH_SHORT).show();
+                etBuscarOverlay.setText(h);
+                buscarProductos(h, inflater);
             });
 
             overlayHistorial.addView(row);
         }
+    }
+
+    private void configurarBusquedaOverlay(LayoutInflater inflater) {
+        // Búsqueda en tiempo real mientras se escribe
+        etBuscarOverlay.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                String query = s.toString().trim();
+                if (query.isEmpty()) {
+                    // Si está vacío, mostrar categorías y historial
+                    layoutResultadosBusqueda.setVisibility(View.GONE);
+                    tvResultadosTitulo.setVisibility(View.GONE);
+                    tvHistorialTitulo.setVisibility(View.VISIBLE);
+                } else {
+                    // Buscar mientras escribe
+                    buscarProductos(query, inflater);
+                }
+            }
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {}
+        });
+
+        // Buscar al presionar Enter
+        etBuscarOverlay.setOnEditorActionListener((v, actionId, event) -> {
+            String query = etBuscarOverlay.getText().toString().trim();
+            if (!query.isEmpty()) {
+                searchHistoryManager.saveSearch(query);
+                buscarProductos(query, inflater);
+                return true;
+            }
+            return false;
+        });
+    }
+
+    private void buscarPorCategoria(String categoria, LayoutInflater inflater) {
+        Log.d(TAG, "buscarPorCategoria llamada con: " + categoria);
+
+        // Asegurar que el overlay esté visible y configurado
+        if (overlayBusqueda == null) {
+            Log.e(TAG, "overlayBusqueda es null");
+            return;
+        }
+
+        if (overlayBusqueda.getVisibility() != View.VISIBLE) {
+            mostrarOverlay(inflater);
+        }
+
+        String queryBuscar = "";
+        String categoriaFiltro = "";
+
+        switch (categoria.toLowerCase()) {
+            case "pollo":
+                queryBuscar = "Pollo";
+                categoriaFiltro = ""; // Buscar por nombre y restaurante, no por categoría
+                break;
+            case "pizza":
+                queryBuscar = "Pizza";
+                categoriaFiltro = "pizza";
+                break;
+            case "hamburguesa":
+                queryBuscar = "Hamburguesa";
+                categoriaFiltro = ""; // Buscar por nombre y restaurante
+                break;
+            case "china":
+                queryBuscar = "Comida China";
+                categoriaFiltro = "china";
+                break;
+            default:
+                Log.w(TAG, "Categoría desconocida: " + categoria);
+                return;
+        }
+
+        Log.d(TAG, "Buscando: " + queryBuscar + " con filtro de categoría: " + categoriaFiltro);
+
+        // Actualizar el campo de búsqueda
+        if (etBuscarOverlay != null) {
+            etBuscarOverlay.setText(queryBuscar);
+        }
+
+        // Realizar la búsqueda
+        buscarProductosPorCategoria(queryBuscar, categoriaFiltro, inflater);
+
+        // Guardar en historial
+        if (searchHistoryManager != null) {
+            searchHistoryManager.saveSearch(queryBuscar);
+        }
+
+        Log.d(TAG, "Búsqueda de categoría completada");
+    }
+
+    private void buscarProductosPorCategoria(String queryNombre, String categoriaFiltro, LayoutInflater inflater) {
+        if (queryNombre == null || queryNombre.trim().isEmpty()) {
+            if (layoutResultadosBusqueda != null) {
+                layoutResultadosBusqueda.setVisibility(View.GONE);
+            }
+            if (tvResultadosTitulo != null) {
+                tvResultadosTitulo.setVisibility(View.GONE);
+            }
+            if (tvHistorialTitulo != null) {
+                tvHistorialTitulo.setVisibility(View.VISIBLE);
+            }
+            return;
+        }
+
+        if (todosLosProductos == null || todosLosProductos.isEmpty()) {
+            Log.e(TAG, "todosLosProductos está vacío o es null");
+            return;
+        }
+
+        String queryLower = queryNombre.toLowerCase().trim();
+        List<Producto> resultados = new ArrayList<>();
+
+        Log.d(TAG, "Buscando productos. Query: " + queryLower + ", Total productos: " + todosLosProductos.size());
+
+        // Buscar en todos los productos
+        for (Producto producto : todosLosProductos) {
+            String nombre = producto.getNombre() != null ? producto.getNombre().toLowerCase() : "";
+            String descripcion = producto.getDescripcion() != null ? producto.getDescripcion().toLowerCase() : "";
+            String categoria = producto.getCategoria() != null ? producto.getCategoria().toLowerCase() : "";
+            String restaurante = producto.getRestaurante() != null ? producto.getRestaurante().toLowerCase() : "";
+
+            boolean coincide = false;
+
+            // Aplicar filtros específicos según la búsqueda
+            if (queryLower.equals("pollo")) {
+                // Buscar productos de pollo - cualquier producto con "pollo" en nombre o Pollo Campero
+                coincide = nombre.contains("pollo") || restaurante.contains("campero");
+            } else if (queryLower.equals("pizza")) {
+                // Mostrar todos los productos de pizza - categoría "pizza" o nombre contiene pizza
+                coincide = categoria.equals("pizza") || nombre.contains("pizza");
+            } else if (queryLower.equals("hamburguesa")) {
+                // Buscar hamburguesas - productos de Burger King o con "hamburguesa"/"burger"
+                coincide = restaurante.contains("burger") ||
+                        nombre.contains("hamburguesa") ||
+                        nombre.contains("burger") ||
+                        nombre.contains("whopper");
+            } else if (queryLower.equals("comida china") || queryLower.equals("china")) {
+                // Mostrar todos los productos de comida china - categoría "china" o restaurante contiene china
+                coincide = categoria.equals("china") || restaurante.contains("china");
+            } else if (categoriaFiltro != null && !categoriaFiltro.isEmpty()) {
+                // Si hay filtro de categoría, usar solo ese filtro
+                coincide = categoria.equals(categoriaFiltro.toLowerCase());
+            } else {
+                // Búsqueda normal sin filtro específico
+                coincide = nombre.contains(queryLower) ||
+                        descripcion.contains(queryLower) ||
+                        categoria.contains(queryLower) ||
+                        restaurante.contains(queryLower);
+            }
+
+            if (coincide) {
+                resultados.add(producto);
+            }
+        }
+
+        Log.d(TAG, "Resultados encontrados: " + resultados.size());
+
+        // Mostrar resultados
+        mostrarResultadosBusqueda(resultados, inflater);
+
+        // Ocultar historial cuando hay búsqueda activa
+        if (tvHistorialTitulo != null) {
+            tvHistorialTitulo.setVisibility(View.GONE);
+        }
+        if (overlayHistorial != null) {
+            overlayHistorial.setVisibility(View.GONE);
+        }
+    }
+
+    private void buscarProductos(String query, LayoutInflater inflater) {
+        if (query == null || query.trim().isEmpty()) {
+            layoutResultadosBusqueda.setVisibility(View.GONE);
+            tvResultadosTitulo.setVisibility(View.GONE);
+            tvHistorialTitulo.setVisibility(View.VISIBLE);
+            return;
+        }
+
+        String queryLower = query.toLowerCase().trim();
+        List<Producto> resultados = new ArrayList<>();
+
+        // Buscar en todos los productos
+        for (Producto producto : todosLosProductos) {
+            String nombre = producto.getNombre() != null ? producto.getNombre().toLowerCase() : "";
+            String descripcion = producto.getDescripcion() != null ? producto.getDescripcion().toLowerCase() : "";
+            String categoria = producto.getCategoria() != null ? producto.getCategoria().toLowerCase() : "";
+            String restaurante = producto.getRestaurante() != null ? producto.getRestaurante().toLowerCase() : "";
+
+            // Buscar coincidencias en nombre, descripción, categoría o restaurante
+            if (nombre.contains(queryLower) ||
+                    descripcion.contains(queryLower) ||
+                    categoria.contains(queryLower) ||
+                    restaurante.contains(queryLower)) {
+                resultados.add(producto);
+            }
+        }
+
+        // Mostrar resultados
+        mostrarResultadosBusqueda(resultados, inflater);
+
+        // Ocultar historial cuando hay búsqueda activa
+        if (!query.trim().isEmpty()) {
+            tvHistorialTitulo.setVisibility(View.GONE);
+            overlayHistorial.setVisibility(View.GONE);
+        } else {
+            tvHistorialTitulo.setVisibility(View.VISIBLE);
+            overlayHistorial.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void mostrarResultadosBusqueda(List<Producto> resultados, LayoutInflater inflater) {
+        if (layoutResultadosBusqueda == null) {
+            Log.e(TAG, "layoutResultadosBusqueda es null");
+            return;
+        }
+
+        layoutResultadosBusqueda.removeAllViews();
+
+        Log.d(TAG, "Mostrando " + resultados.size() + " resultados");
+
+        if (resultados.isEmpty()) {
+            TextView noResults = new TextView(getContext());
+            noResults.setText("No se encontraron resultados");
+            noResults.setTextSize(14);
+            noResults.setTextColor(0xFF888888);
+            noResults.setPadding(0, 16, 0, 16);
+            layoutResultadosBusqueda.addView(noResults);
+        } else {
+            if (tvResultadosTitulo != null) {
+                tvResultadosTitulo.setText("Resultados (" + resultados.size() + ")");
+                tvResultadosTitulo.setVisibility(View.VISIBLE);
+            }
+
+            // Crear contenedor horizontal scroll para los resultados
+            android.widget.HorizontalScrollView scrollView = new android.widget.HorizontalScrollView(getContext());
+            scrollView.setLayoutParams(new android.view.ViewGroup.LayoutParams(
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+            ));
+            scrollView.setHorizontalScrollBarEnabled(false);
+
+            LinearLayout containerHorizontal = new LinearLayout(getContext());
+            containerHorizontal.setOrientation(LinearLayout.HORIZONTAL);
+            containerHorizontal.setPadding(4, 0, 4, 0);
+
+            // Agregar productos a los resultados
+            agregarProductos(containerHorizontal, resultados, inflater);
+
+            scrollView.addView(containerHorizontal);
+            layoutResultadosBusqueda.addView(scrollView);
+        }
+
+        layoutResultadosBusqueda.setVisibility(View.VISIBLE);
     }
 
     private void setupCategoriaButtons(LayoutInflater inflater) {

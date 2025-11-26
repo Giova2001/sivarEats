@@ -1,9 +1,12 @@
 package com.example.sivareats.fragments;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,11 +22,15 @@ import com.example.sivareats.model.Producto;
 import com.example.sivareats.ui.ordenes.RastreandoPedidoActivity;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class OrdersFragment extends Fragment {
 
@@ -31,10 +38,17 @@ public class OrdersFragment extends Fragment {
     private OrdenesAdapter adapter;
     private TabLayout tabLayout;
     private TextInputEditText etBuscar;
-    
+
     private List<Pedido> pedidosActivos;
     private List<Pedido> pedidosCompletados;
     private List<Pedido> pedidosFiltrados;
+
+    private FirebaseFirestore db;
+    private String userEmail;
+    private boolean isLoading = false; // Flag para prevenir cargas simultáneas
+    private boolean isViewCreated = false; // Flag para saber si la vista ya fue creada
+
+    private static final String TAG = "OrdersFragment";
 
     public OrdersFragment() {
         // Required empty public constructor
@@ -44,20 +58,27 @@ public class OrdersFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_orders, container, false);
-        
+
         // Inicializar vistas
         recyclerViewPedidos = view.findViewById(R.id.recyclerViewPedidos);
         tabLayout = view.findViewById(R.id.tabLayout);
         etBuscar = view.findViewById(R.id.etBuscar);
-        
+
         // Configurar RecyclerView
         recyclerViewPedidos.setLayoutManager(new LinearLayoutManager(getContext()));
-        
-        // Inicializar datos de ejemplo
-        inicializarDatosEjemplo();
-        
-        // Configurar adapter
-        adapter = new OrdenesAdapter(pedidosActivos);
+
+        // Inicializar Firebase y usuario
+        db = FirebaseFirestore.getInstance();
+        SharedPreferences prefs = requireContext().getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
+        userEmail = prefs.getString("CURRENT_USER_EMAIL", null);
+
+        // Inicializar listas
+        pedidosActivos = new ArrayList<>();
+        pedidosCompletados = new ArrayList<>();
+        pedidosFiltrados = new ArrayList<>(pedidosActivos);
+
+        // Configurar adapter con lista vacía inicial
+        adapter = new OrdenesAdapter(pedidosFiltrados);
         adapter.setOnPedidoClickListener(new OrdenesAdapter.OnPedidoClickListener() {
             @Override
             public void onRastrearClick(Pedido pedido) {
@@ -79,7 +100,7 @@ public class OrdersFragment extends Fragment {
             }
         });
         recyclerViewPedidos.setAdapter(adapter);
-        
+
         // Configurar pestañas
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
@@ -93,7 +114,7 @@ public class OrdersFragment extends Fragment {
             @Override
             public void onTabReselected(TabLayout.Tab tab) {}
         });
-        
+
         // Configurar búsqueda
         etBuscar.addTextChangedListener(new TextWatcher() {
             @Override
@@ -107,49 +128,239 @@ public class OrdersFragment extends Fragment {
             @Override
             public void afterTextChanged(Editable s) {}
         });
-        
+
+        isViewCreated = true;
+
+        // Cargar pedidos desde Firebase solo cuando la vista está lista
+        if (userEmail != null) {
+            cargarPedidosDesdeFirebase();
+        }
+
         return view;
     }
-    
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Solo recargar pedidos si la vista ya fue creada y no se está cargando actualmente
+        if (isViewCreated && userEmail != null && !isLoading) {
+            cargarPedidosDesdeFirebase();
+        }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        isViewCreated = false;
+    }
+
+    private void cargarPedidosDesdeFirebase() {
+        // Prevenir cargas simultáneas
+        if (isLoading) {
+            Log.d(TAG, "Ya se está cargando, ignorando nueva solicitud");
+            return;
+        }
+
+        if (userEmail == null || userEmail.isEmpty()) {
+            Log.e(TAG, "Usuario no identificado, no se pueden cargar pedidos");
+            // Usar datos de ejemplo si no hay usuario
+            inicializarDatosEjemplo();
+            return;
+        }
+
+        isLoading = true;
+
+        // Limpiar listas antes de cargar nuevos datos
+        pedidosActivos.clear();
+        pedidosCompletados.clear();
+
+        // Usar un mapa para evitar duplicados basados en el ID del pedido
+        Map<String, Pedido> pedidosActivosMap = new HashMap<>();
+        Map<String, Pedido> pedidosCompletadosMap = new HashMap<>();
+
+        db.collection("users").document(userEmail)
+                .collection("pedidos")
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    isLoading = false;
+
+                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                        try {
+                            Pedido pedido = convertirDocumentoAPedido(document);
+                            if (pedido != null && pedido.getId() != null) {
+                                // Usar el ID del pedido como clave para evitar duplicados
+                                String pedidoId = pedido.getId();
+
+                                if ("activo".equals(pedido.getEstado())) {
+                                    // Solo agregar si no existe ya
+                                    if (!pedidosActivosMap.containsKey(pedidoId)) {
+                                        pedidosActivosMap.put(pedidoId, pedido);
+                                    } else {
+                                        Log.w(TAG, "Pedido duplicado detectado y omitido: " + pedidoId);
+                                    }
+                                } else {
+                                    // Solo agregar si no existe ya
+                                    if (!pedidosCompletadosMap.containsKey(pedidoId)) {
+                                        pedidosCompletadosMap.put(pedidoId, pedido);
+                                    } else {
+                                        Log.w(TAG, "Pedido duplicado detectado y omitido: " + pedidoId);
+                                    }
+                                }
+                            }
+                        } catch (Exception e) {
+                            Log.e(TAG, "Error al convertir documento a pedido: " + e.getMessage());
+                        }
+                    }
+
+                    // Convertir los mapas a listas
+                    pedidosActivos = new ArrayList<>(pedidosActivosMap.values());
+                    pedidosCompletados = new ArrayList<>(pedidosCompletadosMap.values());
+
+                    // Ordenar por fecha (más recientes primero)
+                    pedidosActivos.sort((p1, p2) -> p2.getFecha().compareTo(p1.getFecha()));
+                    pedidosCompletados.sort((p1, p2) -> p2.getFecha().compareTo(p1.getFecha()));
+
+                    // Actualizar la vista
+                    actualizarVista();
+
+                    Log.d(TAG, "Pedidos cargados: " + pedidosActivos.size() + " activos, " + pedidosCompletados.size() + " completados");
+                })
+                .addOnFailureListener(e -> {
+                    isLoading = false;
+                    Log.e(TAG, "Error al cargar pedidos: " + e.getMessage());
+                    // En caso de error, usar datos de ejemplo
+                    inicializarDatosEjemplo();
+                    actualizarVista();
+                });
+    }
+
+    private Pedido convertirDocumentoAPedido(QueryDocumentSnapshot document) {
+        try {
+            String id = document.getString("id");
+            if (id == null) id = document.getId();
+
+            String restaurante = document.getString("restaurante");
+            if (restaurante == null) restaurante = "Restaurante";
+
+            String direccion = document.getString("direccion");
+            if (direccion == null) direccion = "Dirección no especificada";
+
+            Double totalDouble = document.getDouble("total");
+            double total = totalDouble != null ? totalDouble : 0.0;
+
+            String estado = document.getString("estado");
+            if (estado == null) estado = "activo";
+
+            // Obtener fecha
+            Date fecha;
+            if (document.getTimestamp("fecha") != null) {
+                fecha = document.getTimestamp("fecha").toDate();
+            } else {
+                fecha = new Date();
+            }
+
+            // Obtener productos
+            List<Producto> productos = new ArrayList<>();
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> productosData = (List<Map<String, Object>>) document.get("productos");
+            if (productosData != null) {
+                for (Map<String, Object> prodData : productosData) {
+                    String nombre = (String) prodData.get("nombre");
+                    String descripcion = (String) prodData.get("descripcion");
+                    Double precio = ((Number) prodData.get("precio")).doubleValue();
+                    Long cantidadLong = ((Number) prodData.get("cantidad")).longValue();
+                    int cantidad = cantidadLong != null ? cantidadLong.intValue() : 1;
+                    Long imagenResIdLong = prodData.get("imagenResId") != null ? ((Number) prodData.get("imagenResId")).longValue() : null;
+                    int imagenResId = imagenResIdLong != null ? imagenResIdLong.intValue() : R.drawable.ic_profile;
+
+                    if (nombre != null && precio != null) {
+                        Producto producto = new Producto(nombre, descripcion != null ? descripcion : "", imagenResId, precio, cantidad);
+                        productos.add(producto);
+                    }
+                }
+            }
+
+            Pedido pedido = new Pedido(id, restaurante, direccion, total, estado, fecha, productos);
+
+            // Obtener tiempo estimado
+            Long tiempoEstimadoLong = document.getLong("tiempoEstimado");
+            if (tiempoEstimadoLong != null) {
+                pedido.setTiempoEstimado(tiempoEstimadoLong.intValue());
+            } else {
+                pedido.setTiempoEstimado(30); // Valor por defecto
+            }
+
+            // Obtener información del repartidor si está disponible
+            String repartidorNombre = document.getString("repartidorNombre");
+            String repartidorTelefono = document.getString("repartidorTelefono");
+            if (repartidorNombre != null) pedido.setRepartidorNombre(repartidorNombre);
+            if (repartidorTelefono != null) pedido.setRepartidorTelefono(repartidorTelefono);
+
+            return pedido;
+        } catch (Exception e) {
+            Log.e(TAG, "Error al convertir documento: " + e.getMessage());
+            return null;
+        }
+    }
+
+    private void actualizarVista() {
+        if (adapter != null && tabLayout != null) {
+            int selectedTab = tabLayout.getSelectedTabPosition();
+            // Si no hay tab seleccionado o la posición es -1, usar el primero (En curso)
+            if (selectedTab == -1 || selectedTab < 0) {
+                selectedTab = 0;
+            }
+            cambiarTab(selectedTab);
+        }
+    }
+
     private void inicializarDatosEjemplo() {
         pedidosActivos = new ArrayList<>();
         pedidosCompletados = new ArrayList<>();
-        
+
         // Pedido activo de ejemplo
         List<Producto> productos1 = new ArrayList<>();
         productos1.add(new Producto("Hamburguesa Doble", "Hamburguesa con doble carne", R.drawable.ic_profile, 12.50, 1));
         productos1.add(new Producto("Papas Fritas", "Papas fritas grandes", R.drawable.ic_profile, 5.00, 1));
-        
-        Pedido pedido1 = new Pedido("PED001", "Burger King - Santa Ana", 
+
+        Pedido pedido1 = new Pedido("PED001", "Burger King - Santa Ana",
                 "Calle Principal #123, San Salvador", 17.50, "activo", new Date(), productos1);
         pedido1.setRepartidorNombre("Samuel Rodriguez");
         pedido1.setRepartidorTelefono("70204560");
         pedido1.setTiempoEstimado(30);
         pedidosActivos.add(pedido1);
-        
+
         // Otro pedido activo
         List<Producto> productos2 = new ArrayList<>();
         productos2.add(new Producto("Pizza Familiar", "Pizza grande con todos los ingredientes", R.drawable.ic_profile, 18.00, 1));
-        
-        Pedido pedido2 = new Pedido("PED002", "Pizza Hut - Metrocentro", 
+
+        Pedido pedido2 = new Pedido("PED002", "Pizza Hut - Metrocentro",
                 "Boulevard de los Héroes, San Salvador", 18.00, "activo", new Date(), productos2);
         pedido2.setRepartidorNombre("Carlos Méndez");
         pedido2.setRepartidorTelefono("22345678");
         pedido2.setTiempoEstimado(25);
         pedidosActivos.add(pedido2);
-        
+
         // Pedidos completados de ejemplo
         List<Producto> productos3 = new ArrayList<>();
         productos3.add(new Producto("Combo Super Campero", "Tres piezas de pollo más ensalada", R.drawable.ic_profile, 7.50, 1));
-        
-        Pedido pedido3 = new Pedido("PED003", "Pollo Campero - Centro", 
+
+        Pedido pedido3 = new Pedido("PED003", "Pollo Campero - Centro",
                 "Avenida España #456, San Salvador", 7.50, "completado", new Date(), productos3);
         pedidosCompletados.add(pedido3);
-        
+
         pedidosFiltrados = new ArrayList<>(pedidosActivos);
     }
-    
+
     private void cambiarTab(int position) {
+        // Asegurar que las listas base no sean null
+        if (pedidosActivos == null) {
+            pedidosActivos = new ArrayList<>();
+        }
+        if (pedidosCompletados == null) {
+            pedidosCompletados = new ArrayList<>();
+        }
+
         if (position == 0) {
             // Tab "En curso"
             pedidosFiltrados = new ArrayList<>(pedidosActivos);
@@ -157,9 +368,15 @@ public class OrdersFragment extends Fragment {
             // Tab "Historial"
             pedidosFiltrados = new ArrayList<>(pedidosCompletados);
         }
-        filtrarPedidos(etBuscar.getText().toString());
+
+        // Si no hay pedidos, inicializar lista vacía
+        if (pedidosFiltrados == null) {
+            pedidosFiltrados = new ArrayList<>();
+        }
+
+        filtrarPedidos(etBuscar != null && etBuscar.getText() != null ? etBuscar.getText().toString() : "");
     }
-    
+
     private void filtrarPedidos(String query) {
         if (query == null || query.trim().isEmpty()) {
             adapter.updateList(pedidosFiltrados);
@@ -168,8 +385,8 @@ public class OrdersFragment extends Fragment {
             String queryLower = query.toLowerCase(Locale.getDefault());
             for (Pedido pedido : pedidosFiltrados) {
                 if (pedido.getRestaurante().toLowerCase(Locale.getDefault()).contains(queryLower) ||
-                    pedido.getId().toLowerCase(Locale.getDefault()).contains(queryLower) ||
-                    pedido.getDireccion().toLowerCase(Locale.getDefault()).contains(queryLower)) {
+                        pedido.getId().toLowerCase(Locale.getDefault()).contains(queryLower) ||
+                        pedido.getDireccion().toLowerCase(Locale.getDefault()).contains(queryLower)) {
                     filtrados.add(pedido);
                 }
             }

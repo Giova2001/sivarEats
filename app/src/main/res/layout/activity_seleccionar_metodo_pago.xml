@@ -107,6 +107,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
                 app:cardBackgroundColor="#F0F0F0"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="0dp"
@@ -116,9 +119,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:padding="16dp"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?attr/selectableItemBackground">
+                    android:clickable="false"
+                    android:focusable="false">
 
                     <ImageView
                         android:id="@+id/icon_anadir"

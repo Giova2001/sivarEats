@@ -111,6 +111,15 @@
                 android:textSize="16sp" />
 
             <TextView
+                android:id="@+id/tvDescuento"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textSize="16sp"
+                android:textColor="#4CAF50"
+                android:visibility="gone" />
+
+            <TextView
                 android:id="@+id/tvDelivery"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

@@ -75,81 +75,59 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Otros métodos de pago"
+                android:text="Tarjetas guardadas"
                 android:layout_marginTop="24dp"
                 android:textStyle="bold"
                 android:textColor="@android:color/black"
                 android:textSize="16sp" />
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/card_visa"
+            <!-- Contenedor dinámico para tarjetas -->
+            <LinearLayout
+                android:id="@+id/container_tarjetas"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:orientation="vertical"
+                android:layout_marginTop="8dp" />
+
+            <!-- Opción Añadir nueva tarjeta -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_anadir_tarjeta"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground"
                 app:cardBackgroundColor="#F0F0F0"
                 app:cardCornerRadius="12dp"
-                app:cardElevation="0dp">
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
 
                 <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:padding="16dp">
+                    android:padding="16dp"
+                    android:clickable="false"
+                    android:focusable="false">
 
                     <ImageView
-                        android:id="@+id/icon_visa"
+                        android:id="@+id/icon_anadir"
                         android:layout_width="40dp"
                         android:layout_height="40dp"
                         android:layout_centerVertical="true"
-                        android:src="@drawable/ic_visa_mastercard" /> <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_toEndOf="@id/icon_visa"
-                    android:layout_marginStart="16dp"
-                    android:layout_centerVertical="true"
-                    android:text="**** **** *** 5964"
-                    android:textColor="@android:color/black"
-                    android:textSize="16sp" />
+                        android:src="@drawable/ic_addcircle" />
 
-                    <ImageView
-                        android:id="@+id/btn_edit_card"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:layout_alignParentEnd="true"
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_toEndOf="@id/icon_anadir"
+                        android:layout_marginStart="16dp"
                         android:layout_centerVertical="true"
-                        android:src="@drawable/ic_edit" /> </RelativeLayout>
+                        android:text="Añadir nueva tarjeta"
+                        android:textColor="@android:color/black"
+                        android:textSize="16sp" />
+                </RelativeLayout>
             </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:hint="Añadir nuevo método de pago">
-
-                <AutoCompleteTextView
-                    android:id="@+id/dropdown_add_method"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="none" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <TextView
-                android:id="@+id/option_tarjeta"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Tarjeta de Crédito/Débito"
-                android:padding="12dp"
-                android:visibility="gone"
-                android:textColor="@android:color/black"/>
-
-            <TextView
-                android:id="@+id/option_paypal"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Cuenta Paypal"
-                android:padding="12dp"
-                android:visibility="gone"
-                android:textColor="@android:color/black"/>
 
         </LinearLayout>
     </ScrollView>

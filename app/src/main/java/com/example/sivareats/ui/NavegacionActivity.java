@@ -36,8 +36,14 @@ public class NavegacionActivity extends AppCompatActivity {
         setupBottomNavigation();
         setupMenuForUserType();
 
-        // Cargar fragmento inicial
-        if (savedInstanceState == null) {
+        // Verificar si se debe navegar a home desde otra actividad
+        String navigateTo = getIntent().getStringExtra("navigate_to");
+        if ("home".equals(navigateTo)) {
+            // Seleccionar Home en la navegación y cargar el fragmento
+            bottomNavigationView.setSelectedItemId(R.id.nav_home);
+            loadFragment(new HomeFragment());
+        } else if (savedInstanceState == null) {
+            // Cargar fragmento inicial normal
             loadFragment(new HomeFragment());
         }
     }
@@ -138,7 +144,7 @@ public class NavegacionActivity extends AppCompatActivity {
         });
     }
 
-    private void loadFragment(Fragment fragment) {
+    public void loadFragment(Fragment fragment) {
         String fragmentTag = fragment.getClass().getSimpleName();
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
 

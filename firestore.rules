@@ -22,18 +22,41 @@ service cloud.firestore {
       allow update: if request.auth != null 
                     && (resource.data.email == request.auth.token.email 
                         || request.resource.data.email == request.auth.token.email);
+
+      // Subcolección de métodos de pago
+      match /payment_methods/{cardId} {
+        // Permitir lectura y escritura solo si el usuario está autenticado
+        // y el documento pertenece al usuario
+        allow read, write: if request.auth != null
+                          && request.auth.token.email == userId;
+      }
+
+      // Subcolección de pedidos
+      match /pedidos/{pedidoId} {
+        // Permitir lectura y escritura solo si el usuario está autenticado
+        // y el documento pertenece al usuario
+        allow read, write: if request.auth != null
+                          && request.auth.token.email == userId;
+      }
     }
-    
+
     // Regla para otras colecciones (ubicaciones, etc.)
     match /ubicaciones/{ubicacionId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null;
     }
-    
+
+    // Regla para códigos de descuento - lectura pública, escritura solo para admins
+    match /codigos_descuento/{codigoId} {
+      // Permitir lectura pública para que cualquier usuario pueda validar códigos
+      allow read: if true;
+      // La escritura solo debería ser para administradores (por ahora se puede hacer desde la consola de Firebase)
+      allow write: if false;
+    }
+
     // Regla por defecto: denegar todo lo demás
     match /{document=**} {
       allow read, write: if false;
     }
   }
 }
-
