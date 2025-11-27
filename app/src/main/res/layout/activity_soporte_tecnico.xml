@@ -62,18 +62,20 @@
                             android:id="@+id/et_nombre"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="textPersonName|textCapWords" />
+                            android:inputType="textPersonName|textCapWords"
+                            android:enabled="false"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="Asunto"
                         android:layout_marginTop="16dp"
-                        app:boxBackgroundMode="outline">
+                        app:boxBackgroundMode="outline"
+                        app:endIconMode="dropdown_menu">
 
-                        <AutoCompleteTextView
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
                             android:id="@+id/ac_asunto"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
