@@ -79,10 +79,16 @@ public class UbicationActivity extends AppCompatActivity {
 
             @Override
             public void onFavoriteClick(Ubicacion u) {
-                u.setPreferida(!u.isPreferida());
-                viewModel.actualizar(u);
-                String message = u.isPreferida() ? "Marcada como favorita" : "Quitada de favoritas";
-                Toast.makeText(UbicationActivity.this, message, Toast.LENGTH_SHORT).show();
+                if (!u.isPreferida()) {
+                    // Si se está marcando como favorita, desmarcar todas las demás y marcar esta
+                    viewModel.marcarComoPreferida(u);
+                    Toast.makeText(UbicationActivity.this, "Marcada como favorita", Toast.LENGTH_SHORT).show();
+                } else {
+                    // Si se está desmarcando, simplemente quitar el favorito
+                    u.setPreferida(false);
+                    viewModel.actualizar(u);
+                    Toast.makeText(UbicationActivity.this, "Quitada de favoritas", Toast.LENGTH_SHORT).show();
+                }
             }
         };
 

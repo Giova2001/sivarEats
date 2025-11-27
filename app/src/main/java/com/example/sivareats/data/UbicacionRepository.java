@@ -46,6 +46,20 @@ public class UbicacionRepository {
         Executors.newSingleThreadExecutor().execute(() -> ubicacionDao.eliminar(ubicacion));
     }
 
+    public void desmarcarTodasPreferidas() {
+        Executors.newSingleThreadExecutor().execute(() -> ubicacionDao.desmarcarTodasPreferidas());
+    }
+
+    public void marcarComoPreferida(Ubicacion ubicacion) {
+        Executors.newSingleThreadExecutor().execute(() -> {
+            // Primero desmarcar todas las preferidas
+            ubicacionDao.desmarcarTodasPreferidas();
+            // Luego marcar esta como preferida
+            ubicacion.setPreferida(true);
+            ubicacionDao.actualizar(ubicacion);
+        });
+    }
+
     private boolean tieneInternet(Context context) {
         try {
             ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);

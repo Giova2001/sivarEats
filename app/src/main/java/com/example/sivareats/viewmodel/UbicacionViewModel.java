@@ -37,4 +37,12 @@ public class UbicacionViewModel extends AndroidViewModel {
     public void eliminar(Ubicacion ubicacion) {
         repository.eliminar(ubicacion);
     }
+
+    public void desmarcarTodasPreferidas() {
+        repository.desmarcarTodasPreferidas();
+    }
+
+    public void marcarComoPreferida(Ubicacion ubicacion) {
+        repository.marcarComoPreferida(ubicacion);
+    }
 }

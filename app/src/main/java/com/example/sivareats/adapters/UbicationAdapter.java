@@ -48,8 +48,19 @@ public class UbicationAdapter extends RecyclerView.Adapter<UbicationAdapter.Hold
         Ubicacion u = lista.get(position);
         holder.tvTitle.setText(u.getNombreLugar());
         holder.tvAddress.setText(u.getDireccion());
+        
+        // Actualizar icono de estrella según si es preferida o no
+        if (u.isPreferida()) {
+            holder.btnFavorite.setImageResource(R.drawable.ic_star);
+        } else {
+            holder.btnFavorite.setImageResource(R.drawable.ic_star_border);
+        }
+        
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) listener.onClick(u);
+        });
+        holder.btnFavorite.setOnClickListener(v -> {
+            if (listener != null) listener.onFavoriteClick(u);
         });
         holder.btnEdit.setOnClickListener(v -> {
             if (listener != null) listener.onEdit(u);
@@ -71,12 +82,13 @@ public class UbicationAdapter extends RecyclerView.Adapter<UbicationAdapter.Hold
 
     static class Holder extends RecyclerView.ViewHolder {
         TextView tvTitle, tvAddress;
-        ImageButton btnEdit, btnDelete;
+        ImageButton btnFavorite, btnEdit, btnDelete;
 
         public Holder(@NonNull View itemView) {
             super(itemView);
             tvTitle = itemView.findViewById(R.id.tvTitle);
             tvAddress = itemView.findViewById(R.id.tvAddress);
+            btnFavorite = itemView.findViewById(R.id.btnFavorite);
             btnEdit = itemView.findViewById(R.id.btnEdit);
             btnDelete = itemView.findViewById(R.id.btnDelete);
         }

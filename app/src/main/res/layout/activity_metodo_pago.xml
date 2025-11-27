@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@android:color/white"
-    tools:context=".ui.profile.MetodoPagoActivity">
+    tools:context=".ui.profile.PaymentMethodActivity">
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"

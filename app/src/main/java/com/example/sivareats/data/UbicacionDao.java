@@ -25,4 +25,7 @@ public interface UbicacionDao {
 
     @Query("SELECT * FROM ubicaciones WHERE id = :id LIMIT 1")
     Ubicacion obtenerPorId(int id);
+
+    @Query("UPDATE ubicaciones SET preferida = 0 WHERE preferida = 1")
+    void desmarcarTodasPreferidas();
 }
