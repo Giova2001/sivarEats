@@ -6,13 +6,17 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Patterns;
+import android.view.View;
+import android.view.ViewTreeObserver;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import com.example.sivareats.R;
 import com.example.sivareats.data.AppDatabase;
@@ -33,8 +37,11 @@ import java.util.concurrent.Executors;
 
 public class LoginActivity extends AppCompatActivity {
 
-    private EditText etEmail, etPassword;
+    private EditText etEmail, etPassword, etCountryCode, etPhoneNumber;
     private CheckBox checkBox;
+    private Button btnCorreo, btnTelefono;
+    private android.view.View emailContainer, phoneContainer, passwordContainer;
+    private boolean isEmailMode = true; // true = correo, false = teléfono
     private SharedPreferences sharedPreferences;
     private static final String PREF_NAME = "loginPrefs";
 
@@ -58,7 +65,14 @@ public class LoginActivity extends AppCompatActivity {
         // Vistas
         etEmail = findViewById(R.id.etEmail);
         etPassword = findViewById(R.id.etPassword);
+        etCountryCode = findViewById(R.id.etCountryCode);
+        etPhoneNumber = findViewById(R.id.etPhoneNumber);
         checkBox = findViewById(R.id.checkBox);
+        btnCorreo = findViewById(R.id.btnCorreo);
+        btnTelefono = findViewById(R.id.btnTelefono);
+        emailContainer = findViewById(R.id.emailContainer);
+        phoneContainer = findViewById(R.id.phoneContainer);
+        passwordContainer = findViewById(R.id.passwordContainer);
         Button btnLogin = findViewById(R.id.btnLogin);
         TextView tvRegistrate = findViewById(R.id.tvRegistrate);
 
@@ -70,14 +84,86 @@ public class LoginActivity extends AppCompatActivity {
         sharedPreferences = getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
         loadLoginData();
 
+        // Configurar cambio de modo
+        setupModeSwitching();
+        
+        // Configurar scroll automático cuando aparece el teclado
+        setupKeyboardScroll();
+
         // Login local + Firebase Auth
-        btnLogin.setOnClickListener(v -> loginUserLocal());
+        btnLogin.setOnClickListener(v -> {
+            if (isEmailMode) {
+                loginUserLocal();
+            } else {
+                loginWithPhone();
+            }
+        });
 
         // Ir a registro
         tvRegistrate.setOnClickListener(v -> {
             Intent intent = new Intent(LoginActivity.this, LoginRegisterActivity.class);
             startActivity(intent);
         });
+    }
+
+    private void setupModeSwitching() {
+        btnCorreo.setOnClickListener(v -> switchToEmailMode());
+        btnTelefono.setOnClickListener(v -> switchToPhoneMode());
+        
+        // Inicializar en modo correo
+        switchToEmailMode();
+    }
+
+    private void switchToEmailMode() {
+        isEmailMode = true;
+        btnCorreo.setBackgroundColor(ContextCompat.getColor(this, R.color.info));
+        btnCorreo.setTextColor(ContextCompat.getColor(this, R.color.text_on_secondary));
+        btnTelefono.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+        btnTelefono.setTextColor(android.graphics.Color.BLACK);
+        
+        emailContainer.setVisibility(android.view.View.VISIBLE);
+        phoneContainer.setVisibility(android.view.View.GONE);
+        passwordContainer.setVisibility(android.view.View.VISIBLE);
+        
+        Button btnLogin = findViewById(R.id.btnLogin);
+        btnLogin.setText("Iniciar sesión");
+    }
+
+    private void switchToPhoneMode() {
+        isEmailMode = false;
+        btnTelefono.setBackgroundColor(ContextCompat.getColor(this, R.color.info));
+        btnTelefono.setTextColor(ContextCompat.getColor(this, R.color.text_on_secondary));
+        btnCorreo.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+        btnCorreo.setTextColor(android.graphics.Color.BLACK);
+        
+        emailContainer.setVisibility(android.view.View.GONE);
+        phoneContainer.setVisibility(android.view.View.VISIBLE);
+        passwordContainer.setVisibility(android.view.View.GONE);
+        
+        Button btnLogin = findViewById(R.id.btnLogin);
+        btnLogin.setText("Enviar SMS");
+    }
+
+    private void loginWithPhone() {
+        String countryCode = safeText(etCountryCode);
+        String phoneNumber = safeText(etPhoneNumber);
+        String fullPhoneNumber = countryCode + phoneNumber;
+
+        // Validaciones
+        if (TextUtils.isEmpty(countryCode)) {
+            etCountryCode.setError("Ingresa el código de país");
+            etCountryCode.requestFocus();
+            return;
+        }
+        if (TextUtils.isEmpty(phoneNumber)) {
+            etPhoneNumber.setError("Ingresa tu número de teléfono");
+            etPhoneNumber.requestFocus();
+            return;
+        }
+
+        // Por ahora solo mostrar un mensaje, la implementación completa de SMS
+        // requeriría Firebase Phone Authentication
+        toast("Funcionalidad de SMS en desarrollo. Usa el modo correo por ahora.");
     }
 
     private void loginUserLocal() {
@@ -346,6 +432,67 @@ public class LoginActivity extends AppCompatActivity {
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.clear();
         editor.apply();
+    }
+
+    private void setupKeyboardScroll() {
+        final ScrollView scrollView = findViewById(R.id.scrollView);
+        if (scrollView != null) {
+            scrollView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+                @Override
+                public void onGlobalLayout() {
+                    // Obtener la altura actual de la vista raíz
+                    View rootView = getWindow().getDecorView().findViewById(android.R.id.content);
+                    int heightDiff = rootView.getRootView().getHeight() - rootView.getHeight();
+                    
+                    // Si la diferencia es significativa, el teclado está visible
+                    if (heightDiff > 200) {
+                        // Hacer scroll al campo activo
+                        View focusedView = getCurrentFocus();
+                        if (focusedView != null) {
+                            scrollView.post(() -> {
+                                int scrollAmount = focusedView.getBottom() - (scrollView.getHeight() - 300);
+                                if (scrollAmount > 0) {
+                                    scrollView.smoothScrollBy(0, scrollAmount);
+                                }
+                            });
+                        }
+                    }
+                }
+            });
+        }
+        
+        // También agregar listeners a los campos para hacer scroll cuando se enfocan
+        etEmail.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                scrollToView(v);
+            }
+        });
+        
+        etPassword.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                scrollToView(v);
+            }
+        });
+        
+        etPhoneNumber.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                scrollToView(v);
+            }
+        });
+    }
+    
+    private void scrollToView(View view) {
+        ScrollView scrollView = findViewById(R.id.scrollView);
+        if (scrollView != null) {
+            scrollView.post(() -> {
+                int[] location = new int[2];
+                view.getLocationInWindow(location);
+                int scrollY = location[1] - 200; // Dejar un margen de 200px desde arriba
+                if (scrollY > 0) {
+                    scrollView.smoothScrollTo(0, scrollY);
+                }
+            });
+        }
     }
 
     private void goToMainScreen() {
