@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@android:color/white"
+    android:background="@color/background"
     tools:context=".ui.profile.EditMetodoPagoActivity">
 
     <com.google.android.material.appbar.MaterialToolbar
@@ -30,7 +30,7 @@
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardBackgroundColor="#F0F0F0"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="0dp">
 
@@ -44,7 +44,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Editar método de pago"
-                        android:textColor="@android:color/black"
+                        android:textColor="?attr/colorOnSurface"
                         android:textSize="16sp"
                         android:textStyle="bold" />
 
@@ -58,17 +58,20 @@
                         <ImageView
                             android:layout_width="40dp"
                             android:layout_height="40dp"
-                            android:src="@drawable/ic_visa_mastercard" /> <EditText
-                        android:id="@+id/et_card_number"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="8dp"
-                        android:text="5687 8523 9874 5964"
-                        android:background="@android:color/transparent"
-                        android:textColor="@android:color/black"
-                        android:inputType="number"
-                        android:textSize="16sp"/>
+                            android:src="@drawable/ic_visa_mastercard"
+                            app:tint="?attr/colorOnSurface" />
+                        
+                        <EditText
+                            android:id="@+id/et_card_number"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="8dp"
+                            android:text="5687 8523 9874 5964"
+                            android:background="@android:color/transparent"
+                            android:textColor="?attr/colorOnSurface"
+                            android:inputType="number"
+                            android:textSize="16sp"/>
                     </LinearLayout>
                 </LinearLayout>
 
@@ -84,7 +87,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    app:cardBackgroundColor="#F0F0F0"
+                    app:cardBackgroundColor="?attr/colorSurfaceVariant"
                     app:cardCornerRadius="12dp"
                     app:cardElevation="0dp">
 
@@ -98,7 +101,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Fecha Expiración"
-                            android:textColor="@android:color/darker_gray"
+                            android:textColor="?attr/colorOnSurfaceVariant"
                             android:textSize="12sp" />
 
                         <LinearLayout
@@ -113,7 +116,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
                                 android:text="10/30"
-                                android:textColor="@android:color/black"
+                                android:textColor="?attr/colorOnSurface"
                                 android:background="@android:color/transparent"
                                 android:inputType="date"
                                 android:textSize="16sp"/>
@@ -121,7 +124,8 @@
                             <ImageView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:src="@drawable/ic_dropdown_arrow"/>
+                                android:src="@drawable/ic_dropdown_arrow"
+                                app:tint="?attr/colorOnSurface"/>
                         </LinearLayout>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -134,7 +138,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    app:cardBackgroundColor="#F0F0F0"
+                    app:cardBackgroundColor="?attr/colorSurfaceVariant"
                     app:cardCornerRadius="12dp"
                     app:cardElevation="0dp">
 
@@ -148,7 +152,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="CVC"
-                            android:textColor="@android:color/darker_gray"
+                            android:textColor="?attr/colorOnSurfaceVariant"
                             android:textSize="12sp" />
 
                         <EditText
@@ -156,7 +160,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="806"
-                            android:textColor="@android:color/black"
+                            android:textColor="?attr/colorOnSurface"
                             android:background="@android:color/transparent"
                             android:inputType="numberPassword"
                             android:maxLength="3"
@@ -171,16 +175,19 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="32dp"
                 android:text="Guardar"
+                android:textColor="@android:color/white"
                 android:padding="12dp"
-                android:backgroundTint="@color/info"/> <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_eliminar"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Eliminar método de pago"
-            android:textColor="@color/error"
-            app:strokeColor="@color/error" /> </LinearLayout>
+                android:backgroundTint="@color/info" />
+            
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_eliminar"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Eliminar método de pago"
+                android:textColor="@color/error"
+                app:strokeColor="@color/error" /> </LinearLayout>
     </ScrollView>
 
 </LinearLayout>
