@@ -60,6 +60,9 @@
             android:name=".ui.profile.EditProfileActivity"
             android:exported="false" />
         <activity
+            android:name=".ui.restaurant.AgregarPlatilloActivity"
+            android:exported="false" />
+        <activity
             android:name=".LOGIN.LoginActivity"
             android:exported="false" />
         <activity
