@@ -7,6 +7,8 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -18,6 +20,8 @@ import androidx.appcompat.widget.Toolbar;
 import com.example.sivareats.R;
 import com.example.sivareats.ui.profile.EditMetodoPagoActivity;
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.textfield.MaterialAutoCompleteTextView;
+import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
@@ -30,10 +34,69 @@ public class PaymentMethodActivity extends AppCompatActivity {
     private String userEmail;
     private LinearLayout containerTarjetas;
     private MaterialCardView cardAnadirTarjeta;
+    private MaterialAutoCompleteTextView autoCompleteMetodoPago;
+    private TextInputLayout textInputLayoutMetodoPago;
 
     private List<CardData> tarjetasList = new ArrayList<>();
+    private List<PaymentMethodItem> metodoPagoItems = new ArrayList<>();
+    private PaymentMethodAdapter adapter;
+
+    private String metodoSeleccionado = "efectivo"; // "efectivo" o el cardId
 
     private static final int REQUEST_EDIT_CARD = 1001;
+    
+    // Clase para representar items del dropdown
+    private static class PaymentMethodItem {
+        String id; // "efectivo" o cardId
+        String displayName; // "Efectivo" o "**** **** **** 1234"
+        boolean isEfectivo;
+        
+        PaymentMethodItem(String id, String displayName, boolean isEfectivo) {
+            this.id = id;
+            this.displayName = displayName;
+            this.isEfectivo = isEfectivo;
+        }
+        
+        @Override
+        public String toString() {
+            return displayName;
+        }
+    }
+    
+    // Adapter personalizado para el dropdown
+    private class PaymentMethodAdapter extends ArrayAdapter<PaymentMethodItem> {
+        PaymentMethodAdapter(Context context, List<PaymentMethodItem> items) {
+            super(context, 0, items);
+        }
+        
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            if (convertView == null) {
+                convertView = LayoutInflater.from(getContext()).inflate(
+                        R.layout.item_metodo_pago_dropdown, parent, false);
+            }
+            
+            PaymentMethodItem item = getItem(position);
+            if (item != null) {
+                ImageView icon = convertView.findViewById(R.id.icon_metodo);
+                TextView text = convertView.findViewById(R.id.text_metodo);
+                
+                if (item.isEfectivo) {
+                    icon.setImageResource(R.drawable.ic_cash);
+                } else {
+                    icon.setImageResource(R.drawable.ic_visa_mastercard);
+                }
+                text.setText(item.displayName);
+            }
+            
+            return convertView;
+        }
+        
+        @Override
+        public View getDropDownView(int position, View convertView, ViewGroup parent) {
+            return getView(position, convertView, parent);
+        }
+    }
 
     private static class CardData {
         String cardId;
@@ -70,12 +133,39 @@ public class PaymentMethodActivity extends AppCompatActivity {
 
         containerTarjetas = findViewById(R.id.container_tarjetas);
         cardAnadirTarjeta = findViewById(R.id.card_anadir_tarjeta);
+        autoCompleteMetodoPago = findViewById(R.id.autoComplete_metodo_pago);
+        textInputLayoutMetodoPago = findViewById(R.id.textInputLayout_metodo_pago);
 
         // Validar que todos los views se encontraron
         if (cardAnadirTarjeta == null) {
             Log.e("PaymentMethodActivity", "ERROR: cardAnadirTarjeta es null!");
             Toast.makeText(this, "Error: No se encontró el botón de añadir tarjeta", Toast.LENGTH_LONG).show();
         }
+        
+        // Cargar método seleccionado guardado
+        metodoSeleccionado = prefs.getString("METODO_PAGO_SELECCIONADO", "efectivo");
+        
+        // Inicializar adapter
+        metodoPagoItems = new ArrayList<>();
+        adapter = new PaymentMethodAdapter(this, metodoPagoItems);
+        autoCompleteMetodoPago.setAdapter(adapter);
+        
+        // Listener para cuando se selecciona un método
+        autoCompleteMetodoPago.setOnItemClickListener((parent, view, position, id) -> {
+            PaymentMethodItem selected = adapter.getItem(position);
+            if (selected != null) {
+                metodoSeleccionado = selected.id;
+                // Guardar selección
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.putString("METODO_PAGO_SELECCIONADO", metodoSeleccionado);
+                editor.apply();
+                
+                // Actualizar icono
+                actualizarIconoMetodoPago(selected.isEfectivo);
+                
+                Log.d("PaymentMethodActivity", "Método seleccionado: " + selected.displayName);
+            }
+        });
 
         // Configurar botón para añadir tarjeta
         cardAnadirTarjeta.setOnClickListener(v -> {
@@ -104,7 +194,11 @@ public class PaymentMethodActivity extends AppCompatActivity {
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     tarjetasList.clear();
+                    metodoPagoItems.clear();
                     containerTarjetas.removeAllViews();
+
+                    // Agregar efectivo como primera opción
+                    metodoPagoItems.add(new PaymentMethodItem("efectivo", "Efectivo", true));
 
                     if (!queryDocumentSnapshots.isEmpty()) {
                         for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
@@ -116,16 +210,46 @@ public class PaymentMethodActivity extends AppCompatActivity {
                                 CardData card = new CardData(cardId, cardNumber, cardType);
                                 tarjetasList.add(card);
 
+                                // Agregar al dropdown
+                                String maskedCard = maskCardNumber(cardNumber);
+                                metodoPagoItems.add(new PaymentMethodItem(cardId, maskedCard, false));
+
                                 MaterialCardView cardView = crearCardTarjeta(card);
                                 containerTarjetas.addView(cardView);
                             }
                         }
                     }
+                    
+                    // Actualizar adapter
+                    adapter.notifyDataSetChanged();
+                    
+                    // Seleccionar el método guardado
+                    seleccionarMetodoGuardado();
                 })
                 .addOnFailureListener(e -> {
                     Log.e("PaymentMethodActivity", "Error al cargar tarjetas: " + e.getMessage());
                     Toast.makeText(this, "Error al cargar métodos de pago", Toast.LENGTH_SHORT).show();
                 });
+    }
+    
+    private void seleccionarMetodoGuardado() {
+        for (int i = 0; i < metodoPagoItems.size(); i++) {
+            if (metodoPagoItems.get(i).id.equals(metodoSeleccionado)) {
+                autoCompleteMetodoPago.setText(metodoPagoItems.get(i).displayName, false);
+                actualizarIconoMetodoPago(metodoPagoItems.get(i).isEfectivo);
+                break;
+            }
+        }
+    }
+    
+    private void actualizarIconoMetodoPago(boolean isEfectivo) {
+        if (textInputLayoutMetodoPago != null) {
+            if (isEfectivo) {
+                textInputLayoutMetodoPago.setStartIconDrawable(R.drawable.ic_cash);
+            } else {
+                textInputLayoutMetodoPago.setStartIconDrawable(R.drawable.ic_visa_mastercard);
+            }
+        }
     }
 
     private MaterialCardView crearCardTarjeta(CardData card) {
