@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="55dp"
     android:orientation="horizontal"
@@ -15,7 +16,8 @@
         android:id="@+id/icono_direccion"
         android:layout_width="28dp"
         android:layout_height="28dp"
-        android:src="@drawable/ic_home" />
+        android:src="@drawable/ic_home"
+        app:tint="?attr/colorOnSurface" />
 
     <TextView
         android:id="@+id/texto_direccion"
@@ -25,5 +27,5 @@
         android:text="Casa"
         android:textSize="16sp"
         android:layout_marginStart="12dp"
-        android:textColor="@android:color/black" />
+        android:textColor="?attr/colorOnSurface" />
 </LinearLayout>

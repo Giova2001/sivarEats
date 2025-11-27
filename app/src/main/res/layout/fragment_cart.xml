@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FCF5FD"
+    android:background="@color/background"
     tools:context=".fragments.CartFragment">
 
     <!-- Botón de regresar -->
@@ -16,7 +16,7 @@
         android:contentDescription="Regresar"
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
-        app:backgroundTint="#FCF5FD"
+        app:backgroundTint="?attr/colorSurface"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:srcCompat="?attr/homeAsUpIndicator" />
@@ -28,7 +28,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="100dp"
         android:text="Carrito"
-        android:textColor="@android:color/black"
+        android:textColor="?attr/colorOnSurface"
         android:textSize="26sp"
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="@id/btnRegresarCarrito"
@@ -55,7 +55,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="16dp"
-        android:background="@android:color/white"
+        android:background="?attr/colorSurface"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -65,7 +65,7 @@
             android:text="Código promocional"
             android:textStyle="bold"
             android:textSize="18sp"
-            android:textColor="@android:color/black"
+            android:textColor="?attr/colorOnSurface"
             android:layout_height="2dp"
             android:layout_width="2dp"/>
 
@@ -108,6 +108,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Subtotal: $0.00"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="16sp" />
 
             <TextView
@@ -124,6 +125,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Delivery: $0.00"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="16sp" />
 
             <TextView
@@ -131,6 +133,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Total: $0.00"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="18sp"
                 android:textStyle="bold"
                 android:layout_marginTop="4dp" />

@@ -18,6 +18,7 @@
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:src="@drawable/ic_return"
+        app:tint="?attr/colorOnSurface"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
@@ -33,6 +34,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:cardCornerRadius="20dp"
+        app:cardBackgroundColor="?attr/colorSurface"
         android:layout_margin="16dp">
 
         <LinearLayout
@@ -46,7 +48,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Llegando en 30 minutos"
-                android:textColor="@android:color/black"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
@@ -55,12 +57,13 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Entrega tu pedido"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="14sp" />
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="#E0E0E0"
+                android:background="?attr/colorOutline"
                 android:layout_marginTop="16dp"
                 android:layout_marginBottom="16dp"/>
 
@@ -69,7 +72,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Hamburgesa Doble"
-                android:textColor="@android:color/black"
+                android:textColor="?attr/colorOnSurface"
                 android:textStyle="bold"
                 android:textSize="16sp"/>
 
@@ -78,6 +81,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Burger King - Santa ana"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="14sp"/>
 
             <RelativeLayout
@@ -89,7 +93,8 @@
                     android:id="@+id/img_repartidor"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
-                    android:src="@drawable/ic_profile" /> <LinearLayout
+                    android:src="@drawable/ic_profile"
+                    app:tint="?attr/colorOnSurface" /> <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
@@ -102,14 +107,15 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Samuel Rodriguez"
-                    android:textColor="@android:color/black"
+                    android:textColor="?attr/colorOnSurface"
                     android:textStyle="bold"/>
 
                 <TextView
                     android:id="@+id/tv_repartidor_telefono"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Delivery 70204560"/>
+                    android:text="Delivery 70204560"
+                    android:textColor="?attr/colorOnSurfaceVariant"/>
             </LinearLayout>
 
                 <ImageButton
@@ -117,6 +123,7 @@
                     android:layout_width="48dp"
                     android:layout_height="48dp"
                     android:src="@drawable/ic_message"
+                    app:tint="@color/info"
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
                     android:background="?attr/selectableItemBackgroundBorderless"/>
@@ -126,6 +133,7 @@
                     android:layout_width="48dp"
                     android:layout_height="48dp"
                     android:src="@drawable/ic_call"
+                    app:tint="@color/secondary"
                     android:layout_toStartOf="@id/btn_chatear"
                     android:layout_centerVertical="true"
                     android:background="?attr/selectableItemBackgroundBorderless"/>

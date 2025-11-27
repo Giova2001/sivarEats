@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@android:color/white"
+    android:background="@color/background"
     tools:context=".ui.profile.PaymentMethodActivity">
 
     <com.google.android.material.appbar.MaterialToolbar
@@ -31,14 +31,14 @@
                 android:layout_height="wrap_content"
                 android:text="Método de pago principal"
                 android:textStyle="bold"
-                android:textColor="@android:color/black"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="16sp" />
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                app:cardBackgroundColor="#F0F0F0"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="0dp">
 
@@ -59,7 +59,7 @@
                     android:layout_marginStart="16dp"
                     android:layout_centerVertical="true"
                     android:text="Efectivo"
-                    android:textColor="@android:color/black"
+                    android:textColor="?attr/colorOnSurface"
                     android:textSize="20sp"
                     android:textStyle="bold" />
 
@@ -78,7 +78,7 @@
                 android:text="Tarjetas guardadas"
                 android:layout_marginTop="24dp"
                 android:textStyle="bold"
-                android:textColor="@android:color/black"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="16sp" />
 
             <!-- Contenedor dinámico para tarjetas -->
@@ -98,7 +98,7 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground"
-                app:cardBackgroundColor="#F0F0F0"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="0dp">
@@ -124,7 +124,7 @@
                         android:layout_marginStart="16dp"
                         android:layout_centerVertical="true"
                         android:text="Añadir nueva tarjeta"
-                        android:textColor="@android:color/black"
+                        android:textColor="?attr/colorOnSurface"
                         android:textSize="16sp" />
                 </RelativeLayout>
             </com.google.android.material.card.MaterialCardView>

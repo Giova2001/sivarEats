@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF"
+    android:background="@color/background"
     tools:context=".fragments.HomeFragment">
 
     <!-- ======= CONTENIDO PRINCIPAL ======= -->
@@ -14,7 +14,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fillViewport="true"
-        android:background="#FFFFFF">
+        android:background="@color/background">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
@@ -33,7 +33,7 @@
                 android:textSize="32sp"
                 android:textStyle="bold"
                 android:fontFamily="@font/inter_bold"
-                android:textColor="#000000"
+                android:textColor="?attr/colorOnSurface"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintStart_toStartOf="parent"/>
 
@@ -66,8 +66,8 @@
                     android:hint="Buscar en SIVAR EATS"
                     android:background="@null"
                     android:paddingStart="8dp"
-                    android:textColor="#000000"
-                    android:textColorHint="#888888"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textColorHint="?attr/colorOnSurfaceVariant"
                     android:textSize="16sp"/>
 
             </LinearLayout>
@@ -90,7 +90,7 @@
                 android:id="@+id/lineaSubrayado"
                 android:layout_width="0dp"
                 android:layout_height="1dp"
-                android:background="#DDDDDD"
+                android:background="?attr/colorOutline"
                 app:layout_constraintTop_toBottomOf="@id/layoutHistorial"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"/>
@@ -120,9 +120,9 @@
                         app:iconGravity="textStart"
                         app:iconPadding="8dp"
                         app:cornerRadius="16dp"
-                        app:iconTint="#000000"
-                        app:backgroundTint="#F0F0F0"
-                        android:textColor="#000000"
+                        app:iconTint="?attr/colorOnSurface"
+                        app:backgroundTint="?attr/colorSurfaceVariant"
+                        android:textColor="?attr/colorOnSurface"
                         android:layout_marginEnd="12dp"/>
 
                     <com.google.android.material.button.MaterialButton
@@ -132,12 +132,12 @@
                         app:icon="@drawable/ic_corazon"
                         app:iconGravity="textStart"
                         app:iconPadding="8dp"
-                        app:iconTint="#000000"
+                        app:iconTint="?attr/colorOnSurface"
                         android:text="Favoritos"
                         android:layout_marginEnd="12dp"
                         app:cornerRadius="16dp"
-                        app:backgroundTint="#F0F0F0"
-                        android:textColor="#000000"/>
+                        app:backgroundTint="?attr/colorSurfaceVariant"
+                        android:textColor="?attr/colorOnSurface"/>
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnCategoriaChina"
@@ -146,12 +146,12 @@
                         app:icon="@drawable/ic_china"
                         app:iconGravity="textStart"
                         app:iconPadding="8dp"
-                        app:iconTint="#000000"
+                        app:iconTint="?attr/colorOnSurface"
                         android:text="China"
                         android:layout_marginEnd="12dp"
                         app:cornerRadius="16dp"
-                        app:backgroundTint="#F0F0F0"
-                        android:textColor="#000000"/>
+                        app:backgroundTint="?attr/colorSurfaceVariant"
+                        android:textColor="?attr/colorOnSurface"/>
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnCategoriaPizza"
@@ -160,12 +160,12 @@
                         app:icon="@drawable/ic_pizza"
                         app:iconGravity="textStart"
                         app:iconPadding="8dp"
-                        app:iconTint="#000000"
+                        app:iconTint="?attr/colorOnSurface"
                         android:text="Pizza"
                         android:layout_marginEnd="12dp"
                         app:cornerRadius="16dp"
-                        app:backgroundTint="#F0F0F0"
-                        android:textColor="#000000"/>
+                        app:backgroundTint="?attr/colorSurfaceVariant"
+                        android:textColor="?attr/colorOnSurface"/>
 
                 </LinearLayout>
             </HorizontalScrollView>
@@ -311,7 +311,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="16dp"
-                android:background="#FFFFFF"
+                android:background="@color/background"
                 android:clickable="true"
                 android:focusable="true">
 
@@ -330,7 +330,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_search"
-                        app:tint="#888888" />
+                        app:tint="?attr/colorOnSurfaceVariant" />
 
                     <EditText
                         android:id="@+id/etBuscarOverlay"
@@ -340,8 +340,8 @@
                         android:hint="Buscar platillos..."
                         android:background="@null"
                         android:paddingStart="8dp"
-                        android:textColor="#000000"
-                        android:textColorHint="#888888"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textColorHint="?attr/colorOnSurfaceVariant"
                         android:textSize="16sp"
                         android:inputType="text"
                         android:imeOptions="actionSearch"/>
@@ -354,7 +354,7 @@
                     android:layout_height="wrap_content"
                     android:text="Categorías más buscadas"
                     android:textSize="18sp"
-                    android:textColor="#000000"
+                    android:textColor="?attr/colorOnSurface"
                     android:textStyle="bold"
                     android:layout_marginBottom="12dp"/>
 
@@ -398,7 +398,7 @@
                                 android:text="Pollo"
                                 android:textSize="16sp"
                                 android:textStyle="bold"
-                                android:textColor="#000000"/>
+                                android:textColor="?attr/colorOnSurface"/>
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
@@ -435,7 +435,7 @@
                                 android:text="Pizza"
                                 android:textSize="16sp"
                                 android:textStyle="bold"
-                                android:textColor="#000000"/>
+                                android:textColor="?attr/colorOnSurface"/>
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
@@ -472,7 +472,7 @@
                                 android:text="Hamburguesa"
                                 android:textSize="16sp"
                                 android:textStyle="bold"
-                                android:textColor="#000000"/>
+                                android:textColor="?attr/colorOnSurface"/>
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
@@ -508,7 +508,7 @@
                                 android:text="Comida China"
                                 android:textSize="16sp"
                                 android:textStyle="bold"
-                                android:textColor="#000000"/>
+                                android:textColor="?attr/colorOnSurface"/>
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
@@ -521,7 +521,7 @@
                     android:layout_height="wrap_content"
                     android:text="Resultados"
                     android:textSize="18sp"
-                    android:textColor="#000000"
+                    android:textColor="?attr/colorOnSurface"
                     android:textStyle="bold"
                     android:layout_marginBottom="12dp"
                     android:visibility="gone"/>
@@ -540,7 +540,7 @@
                     android:layout_height="wrap_content"
                     android:text="Búsquedas recientes"
                     android:textSize="18sp"
-                    android:textColor="#000000"
+                    android:textColor="?attr/colorOnSurface"
                     android:textStyle="bold"
                     android:layout_marginTop="12dp"
                     android:layout_marginBottom="12dp"/>

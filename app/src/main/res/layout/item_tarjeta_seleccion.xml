@@ -7,7 +7,7 @@
     android:clickable="true"
     android:focusable="true"
     android:foreground="?attr/selectableItemBackground"
-    app:cardBackgroundColor="#F0F0F0"
+    app:cardBackgroundColor="?attr/colorSurfaceVariant"
     app:cardCornerRadius="12dp"
     app:cardElevation="0dp"
     app:strokeWidth="0dp">
@@ -34,7 +34,7 @@
             android:layout_marginStart="16dp"
             android:layout_centerVertical="true"
             android:text="**** **** **** 5964"
-            android:textColor="@android:color/black"
+            android:textColor="?attr/colorOnSurface"
             android:textSize="16sp" />
 
         <LinearLayout
@@ -55,6 +55,7 @@
                 android:layout_height="24dp"
                 android:layout_marginEnd="8dp"
                 android:src="@drawable/ic_star"
+                app:tint="@color/info"
                 android:visibility="gone" />
 
             <ImageView
@@ -63,6 +64,7 @@
                 android:layout_height="28dp"
                 android:layout_marginEnd="8dp"
                 android:src="@drawable/ic_edit"
+                app:tint="@color/info"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:padding="4dp"
                 android:clickable="true"
@@ -74,6 +76,7 @@
                 android:layout_width="28dp"
                 android:layout_height="28dp"
                 android:src="@drawable/ic_remove"
+                app:tint="@color/error"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:padding="4dp"
                 android:clickable="true"
