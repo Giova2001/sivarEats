@@ -173,16 +173,19 @@
                 app:iconGravity="textStart"
                 app:iconPadding="8dp" />
 
-            <!-- Botón de activar biométrica -->
+            <!-- Botón para cambiar tema (modo oscuro/claro) -->
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnActivarBiometrica"
+                android:id="@+id/btnCambiarTema"
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="50dp"
                 android:layout_marginBottom="8dp"
-                android:text="Activar inicio con huella o patrón"
-                android:textColor="@color/info" />
+                android:text="Cambiar tema"
+                android:textColor="@color/text_primary"
+                app:icon="@drawable/ic_theme"
+                app:iconGravity="textStart"
+                app:iconPadding="8dp" />
 
             <!-- Botón de cerrar sesión (diferente estilo) -->
             <com.google.android.material.button.MaterialButton

@@ -13,6 +13,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 
 import com.bumptech.glide.Glide;
@@ -98,7 +99,22 @@ public class ProfileFragment extends Fragment {
         view.findViewById(R.id.btnTerminos).setOnClickListener(v ->
                 startActivity(new Intent(requireContext(), SobreAppActivity.class)));
 
+        // Configurar botón de tema
+        actualizarTextoBotonTema(view);
+        view.findViewById(R.id.btnCambiarTema).setOnClickListener(v -> cambiarTema());
+
         view.findViewById(R.id.btnCerrarSesion).setOnClickListener(v -> logout());
+    }
+
+    private void actualizarTextoBotonTema(View view) {
+        com.google.android.material.button.MaterialButton btnCambiarTema = view.findViewById(R.id.btnCambiarTema);
+        int currentMode = AppCompatDelegate.getDefaultNightMode();
+        
+        if (currentMode == AppCompatDelegate.MODE_NIGHT_YES) {
+            btnCambiarTema.setText("Cambiar a modo claro");
+        } else {
+            btnCambiarTema.setText("Cambiar a modo oscuro");
+        }
     }
 
     private void loadUserProfile() {
@@ -223,6 +239,35 @@ public class ProfileFragment extends Fragment {
     public void onResume() {
         super.onResume();
         loadUserProfile();
+        // Actualizar texto del botón de tema
+        if (getView() != null) {
+            actualizarTextoBotonTema(getView());
+        }
+    }
+
+    private void cambiarTema() {
+        SharedPreferences themePrefs = requireContext().getSharedPreferences("ThemePrefs", Context.MODE_PRIVATE);
+        int currentMode = AppCompatDelegate.getDefaultNightMode();
+        
+        int newMode;
+        if (currentMode == AppCompatDelegate.MODE_NIGHT_YES) {
+            // Cambiar a modo claro
+            newMode = AppCompatDelegate.MODE_NIGHT_NO;
+        } else {
+            // Cambiar a modo oscuro
+            newMode = AppCompatDelegate.MODE_NIGHT_YES;
+        }
+        
+        // Guardar preferencia
+        themePrefs.edit().putInt("night_mode", newMode).apply();
+        
+        // Aplicar el nuevo tema
+        AppCompatDelegate.setDefaultNightMode(newMode);
+        
+        // Actualizar texto del botón
+        if (getView() != null) {
+            actualizarTextoBotonTema(getView());
+        }
     }
 
     private void logout() {
