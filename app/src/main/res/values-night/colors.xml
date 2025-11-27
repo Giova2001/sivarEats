@@ -2,9 +2,9 @@
 <resources>
 
     <!--  COLORES PRIMARIOS -->
-    <color name="primary">#FF6B35</color>
-    <color name="primary_dark">#E55A2B</color>
-    <color name="primary_light">#FF8A65</color>
+    <color name="primary">#2196F3</color>
+    <color name="primary_dark">#1976D2</color>
+    <color name="primary_light">#64B5F6</color>
 
     <!--  COLORES SECUNDARIOS -->
     <color name="secondary">#4CAF50</color>
@@ -16,40 +16,43 @@
     <color name="accent_dark">#FFA726</color>
 
     <!--  COLORES NEUTROS / FONDOS -->
-    <color name="background">#1E1E1E</color>
-    <color name="surface">#121212</color>
-    <color name="on_surface">#E0E0E0</color>
-    <color name="on_surface_light">#9E9E9E</color>
+    <color name="background">#121212</color>
+    <color name="surface">#1E1E1E</color>
+    <color name="on_surface">#FFFFFF</color>
+    <color name="on_surface_light">#BDBDBD</color>
 
     <!--  COLORES DE TEXTO -->
     <color name="text_primary">#FFFFFF</color>
     <color name="text_secondary">#BDBDBD</color>
     <color name="text_hint">#9E9E9E</color>
     <color name="text_on_primary">#FFFFFF</color>
-    <color name="text_on_secondary">#FFFEFE</color>
+    <color name="text_on_secondary">#FFFFFF</color>
 
     <!-- ️ COLORES DE ESTADO -->
     <color name="success">#66BB6A</color>
     <color name="warning">#FFB74D</color>
     <color name="error">#EF5350</color>
-    <color name="info">#64B5F6</color>
+    <color name="info">#2196F3</color>
 
     <!--  COLORES DE BOTONES -->
-    <color name="button_primary">#000000</color>
+    <color name="button_primary">#2196F3</color>
     <color name="button_primary_text">#FFFFFF</color>
     <color name="button_secondary">#2D2D2D</color>
     <color name="button_secondary_text">#E0E0E0</color>
 
     <!--  TARJETAS Y SUPERFICIES -->
     <color name="card_background">#2D2D2D</color>
-    <color name="card_elevation">#FFFFFF08</color>
+    <color name="card_elevation">#000000</color>
 
     <!--  ICONOS -->
-    <color name="icon_active">#FF6B35</color>
+    <color name="icon_active">#2196F3</color>
     <color name="icon_inactive">#757575</color>
 
     <!--  SEPARADORES -->
     <color name="divider">#424242</color>
     <color name="divider_light">#2D2D2D</color>
+
+    <color name="searchBg">#2D2D2D</color>   <!-- gris oscuro del buscador -->
+    <color name="tabBlue">#2196F3</color> <!-- azul para tabs -->
 
 </resources>

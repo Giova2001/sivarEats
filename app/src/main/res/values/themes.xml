@@ -13,9 +13,15 @@
         <!-- Surface colors -->
         <item name="colorSurface">@color/surface</item>
         <item name="colorOnSurface">@color/on_surface</item>
+        <item name="colorSurfaceVariant">@color/card_background</item>
+        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+
+        <!-- Background -->
+        <item name="android:colorBackground">@color/background</item>
 
         <!-- Status bar -->
-        <item name="android:statusBarColor">?attr/colorPrimary</item>
+        <item name="android:statusBarColor">@color/background</item>
+        <item name="android:windowLightStatusBar">true</item>
 
         <!-- Text appearances -->
         <item name="textAppearanceHeadlineLarge">@style/TextAppearance.SivarEats.Headline.Large
