@@ -1,5 +1,7 @@
 package com.example.sivareats.ui;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.View;
@@ -26,10 +28,15 @@ public class NavegacionActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_navegacion);
 
-        // Obtener tipo de usuario (esto vendría del login)
+        // Obtener tipo de usuario desde Intent o SharedPreferences
         String userTypeFromIntent = getIntent().getStringExtra("USER_TYPE");
         if (userTypeFromIntent != null) {
             currentUserType = UserType.fromString(userTypeFromIntent);
+        } else {
+            // Si no viene del Intent, obtenerlo desde SharedPreferences
+            SharedPreferences sessionPrefs = getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
+            String userRol = sessionPrefs.getString("CURRENT_USER_ROL", "USUARIO_NORMAL");
+            currentUserType = UserType.fromString(userRol);
         }
 
         initializeViews();

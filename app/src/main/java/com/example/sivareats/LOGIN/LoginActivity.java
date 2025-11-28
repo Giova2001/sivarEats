@@ -6,13 +6,17 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Patterns;
+import android.view.View;
+import android.view.ViewTreeObserver;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import com.example.sivareats.R;
 import com.example.sivareats.data.AppDatabase;
@@ -33,8 +37,11 @@ import java.util.concurrent.Executors;
 
 public class LoginActivity extends AppCompatActivity {
 
-    private EditText etEmail, etPassword;
+    private EditText etEmail, etPassword, etCountryCode, etPhoneNumber;
     private CheckBox checkBox;
+    private Button btnCorreo, btnTelefono;
+    private android.view.View emailContainer, phoneContainer, passwordContainer;
+    private boolean isEmailMode = true; // true = correo, false = teléfono
     private SharedPreferences sharedPreferences;
     private static final String PREF_NAME = "loginPrefs";
 
@@ -58,7 +65,14 @@ public class LoginActivity extends AppCompatActivity {
         // Vistas
         etEmail = findViewById(R.id.etEmail);
         etPassword = findViewById(R.id.etPassword);
+        etCountryCode = findViewById(R.id.etCountryCode);
+        etPhoneNumber = findViewById(R.id.etPhoneNumber);
         checkBox = findViewById(R.id.checkBox);
+        btnCorreo = findViewById(R.id.btnCorreo);
+        btnTelefono = findViewById(R.id.btnTelefono);
+        emailContainer = findViewById(R.id.emailContainer);
+        phoneContainer = findViewById(R.id.phoneContainer);
+        passwordContainer = findViewById(R.id.passwordContainer);
         Button btnLogin = findViewById(R.id.btnLogin);
         TextView tvRegistrate = findViewById(R.id.tvRegistrate);
 
@@ -70,14 +84,86 @@ public class LoginActivity extends AppCompatActivity {
         sharedPreferences = getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
         loadLoginData();
 
+        // Configurar cambio de modo
+        setupModeSwitching();
+        
+        // Configurar scroll automático cuando aparece el teclado
+        setupKeyboardScroll();
+
         // Login local + Firebase Auth
-        btnLogin.setOnClickListener(v -> loginUserLocal());
+        btnLogin.setOnClickListener(v -> {
+            if (isEmailMode) {
+                loginUserLocal();
+            } else {
+                loginWithPhone();
+            }
+        });
 
         // Ir a registro
         tvRegistrate.setOnClickListener(v -> {
             Intent intent = new Intent(LoginActivity.this, LoginRegisterActivity.class);
             startActivity(intent);
         });
+    }
+
+    private void setupModeSwitching() {
+        btnCorreo.setOnClickListener(v -> switchToEmailMode());
+        btnTelefono.setOnClickListener(v -> switchToPhoneMode());
+        
+        // Inicializar en modo correo
+        switchToEmailMode();
+    }
+
+    private void switchToEmailMode() {
+        isEmailMode = true;
+        btnCorreo.setBackgroundColor(ContextCompat.getColor(this, R.color.info));
+        btnCorreo.setTextColor(ContextCompat.getColor(this, R.color.text_on_secondary));
+        btnTelefono.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+        btnTelefono.setTextColor(android.graphics.Color.BLACK);
+        
+        emailContainer.setVisibility(android.view.View.VISIBLE);
+        phoneContainer.setVisibility(android.view.View.GONE);
+        passwordContainer.setVisibility(android.view.View.VISIBLE);
+        
+        Button btnLogin = findViewById(R.id.btnLogin);
+        btnLogin.setText("Iniciar sesión");
+    }
+
+    private void switchToPhoneMode() {
+        isEmailMode = false;
+        btnTelefono.setBackgroundColor(ContextCompat.getColor(this, R.color.info));
+        btnTelefono.setTextColor(ContextCompat.getColor(this, R.color.text_on_secondary));
+        btnCorreo.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+        btnCorreo.setTextColor(android.graphics.Color.BLACK);
+        
+        emailContainer.setVisibility(android.view.View.GONE);
+        phoneContainer.setVisibility(android.view.View.VISIBLE);
+        passwordContainer.setVisibility(android.view.View.GONE);
+        
+        Button btnLogin = findViewById(R.id.btnLogin);
+        btnLogin.setText("Enviar SMS");
+    }
+
+    private void loginWithPhone() {
+        String countryCode = safeText(etCountryCode);
+        String phoneNumber = safeText(etPhoneNumber);
+        String fullPhoneNumber = countryCode + phoneNumber;
+
+        // Validaciones
+        if (TextUtils.isEmpty(countryCode)) {
+            etCountryCode.setError("Ingresa el código de país");
+            etCountryCode.requestFocus();
+            return;
+        }
+        if (TextUtils.isEmpty(phoneNumber)) {
+            etPhoneNumber.setError("Ingresa tu número de teléfono");
+            etPhoneNumber.requestFocus();
+            return;
+        }
+
+        // Por ahora solo mostrar un mensaje, la implementación completa de SMS
+        // requeriría Firebase Phone Authentication
+        toast("Funcionalidad de SMS en desarrollo. Usa el modo correo por ahora.");
     }
 
     private void loginUserLocal() {
@@ -119,8 +205,9 @@ public class LoginActivity extends AppCompatActivity {
                     // Si la validación local es exitosa, autenticar con Firebase Auth
                     authenticateWithFirebase(email, password);
                 } else {
-                    findViewById(R.id.btnLogin).setEnabled(true);
-                    toast("Correo o contraseña inválidos");
+                    // Si no existe en Room, intentar autenticar directamente con Firebase Auth
+                    // Esto permite que usuarios existentes en Firebase puedan iniciar sesión en dispositivos nuevos
+                    authenticateWithFirebase(email, password);
                 }
             });
         });
@@ -144,21 +231,63 @@ public class LoginActivity extends AppCompatActivity {
                                 editor.putBoolean("remember", false);
                                 editor.apply();
                             }
-                            // También guardar en SivarEatsPrefs para uso en otras actividades
-                            SharedPreferences sessionPrefs = getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
-                            sessionPrefs.edit().putString("CURRENT_USER_EMAIL", email).apply();
+                            
+                            // Obtener rol del usuario desde Firestore y guardarlo
+                            // Esperar a que se cargue el rol antes de navegar
+                            loadAndSaveUserRoleAndNavigate(email);
                             
                             // Sincronizar con Firestore (3ra forma: colección)
                             syncUserToFirestore(email);
-                            
-                            toast("Inicio de sesión exitoso");
-                            goToMainScreen();
                         }
                     } else {
-                        // Si no existe en Firebase Auth, crearlo
-                        createFirebaseUser(email, password);
+                        // Si no existe en Firebase Auth, intentar crear o mostrar error
+                        String errorMsg = task.getException() != null ? 
+                                task.getException().getMessage() : "Error desconocido";
+                        
+                        // Si el error es que el usuario no existe, intentar crear
+                        if (errorMsg.contains("no user record") || errorMsg.contains("USER_NOT_FOUND")) {
+                            createFirebaseUser(email, password);
+                        } else {
+                            // Si el error es de contraseña incorrecta, verificar si existe en Room
+                            // Si existe en Room pero no en Firebase, permitir login local
+                            tryLoginLocalOnly(email, password, errorMsg);
+                        }
                     }
                 });
+    }
+
+    /**
+     * Intenta hacer login solo con Room (sin internet).
+     */
+    private void tryLoginLocalOnly(String email, String password, String firebaseError) {
+        ioExecutor.execute(() -> {
+            boolean ok = false;
+            try {
+                ok = userDao.validateLogin(email, password);
+            } catch (Exception ignored) {}
+
+            boolean finalOk = ok;
+            runOnUiThread(() -> {
+                if (finalOk) {
+                    // Login local exitoso, guardar datos y continuar
+                    if (checkBox.isChecked()) {
+                        saveLoginData(email);
+                    } else {
+                        SharedPreferences.Editor editor = sharedPreferences.edit();
+                        editor.putString("email", email);
+                        editor.putBoolean("remember", false);
+                        editor.apply();
+                    }
+                    
+                    // Obtener rol desde Room y guardarlo
+                    loadRoleFromRoomAndSaveAndNavigate(email);
+                    
+                    toast("Inicio de sesión exitoso (modo offline)");
+                } else {
+                    toast("Correo o contraseña inválidos");
+                }
+            });
+        });
     }
 
     private void createFirebaseUser(String email, String password) {
@@ -178,15 +307,13 @@ public class LoginActivity extends AppCompatActivity {
                                 editor.putBoolean("remember", false);
                                 editor.apply();
                             }
-                            // También guardar en SivarEatsPrefs para uso en otras actividades
-                            SharedPreferences sessionPrefs = getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
-                            sessionPrefs.edit().putString("CURRENT_USER_EMAIL", email).apply();
+                            
+                            // Obtener rol del usuario desde Firestore y guardarlo
+                            // Esperar a que se cargue el rol antes de navegar
+                            loadAndSaveUserRoleAndNavigate(email);
                             
                             // Sincronizar con Firestore (3ra forma: colección)
                             syncUserToFirestore(email);
-                            
-                            toast("Usuario creado y autenticado");
-                            goToMainScreen();
                         }
                     } else {
                         String errorMsg = task.getException() != null ? 
@@ -233,8 +360,8 @@ public class LoginActivity extends AppCompatActivity {
                         userData.put("email", localUser.getEmail());
                         userData.put("alias", localUser.getAlias() != null ? localUser.getAlias() : "");
                         userData.put("telefono", localUser.getTelefono() != null ? localUser.getTelefono() : "");
-                        userData.put("profile_image_url", localUser.getProfileImageUrl() != null ? localUser.getProfileImageUrl() : "");
-                        userData.put("rol", localUser.getRol() != null ? localUser.getRol() : "USUARIO_NORMAL");
+                        //userData.put("profile_image_url", localUser.getProfileImageUrl() != null ? localUser.getProfileImageUrl() : "");
+                        //userData.put("rol", localUser.getRol() != null ? localUser.getRol() : "USUARIO_NORMAL");
                         userData.put("createdAt", FieldValue.serverTimestamp());
                         userData.put("lastLoginAt", FieldValue.serverTimestamp());
 
@@ -272,6 +399,100 @@ public class LoginActivity extends AppCompatActivity {
      * Sincroniza el usuario con Firestore (colección "users").
      * Obtiene los datos desde Room y los guarda/actualiza en Firestore.
      */
+    /**
+     * Carga el rol del usuario desde Firestore y lo guarda en SharedPreferences.
+     */
+    /**
+     * Carga el rol del usuario desde Firestore y lo guarda en SharedPreferences, luego navega.
+     */
+    private void loadAndSaveUserRoleAndNavigate(String email) {
+        firestore.collection("users").document(email)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    String rol = "USUARIO_NORMAL"; // Valor por defecto
+                    
+                    if (documentSnapshot.exists()) {
+                        // Obtener rol desde Firestore
+                        String firestoreRol = documentSnapshot.getString("rol");
+                        if (firestoreRol != null && !firestoreRol.isEmpty()) {
+                            rol = firestoreRol;
+                            // Guardar email y rol en SivarEatsPrefs
+                            saveUserRoleToPrefs(email, rol);
+                            toast("Inicio de sesión exitoso");
+                            goToMainScreen();
+                        } else {
+                            // Si no existe en Firestore, intentar obtenerlo desde Room
+                            loadRoleFromRoomAndSaveAndNavigate(email);
+                        }
+                    } else {
+                        // Si no existe en Firestore, intentar obtenerlo desde Room
+                        loadRoleFromRoomAndSaveAndNavigate(email);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    // Si falla obtener de Firestore, intentar desde Room
+                    loadRoleFromRoomAndSaveAndNavigate(email);
+                });
+    }
+    
+    /**
+     * Carga el rol desde Room y lo guarda en SharedPreferences, luego navega.
+     */
+    private void loadRoleFromRoomAndSaveAndNavigate(String email) {
+        ioExecutor.execute(() -> {
+            try {
+                User localUser = userDao.findByEmail(email);
+                String rol = "USUARIO_NORMAL";
+                if (localUser != null && localUser.getRol() != null && !localUser.getRol().isEmpty()) {
+                    rol = localUser.getRol();
+                }
+                saveUserRoleToPrefs(email, rol);
+                
+                runOnUiThread(() -> {
+                    toast("Inicio de sesión exitoso");
+                    goToMainScreen();
+                });
+            } catch (Exception ex) {
+                // Error silencioso, usar valor por defecto
+                saveUserRoleToPrefs(email, "USUARIO_NORMAL");
+                runOnUiThread(() -> {
+                    toast("Inicio de sesión exitoso");
+                    goToMainScreen();
+                });
+            }
+        });
+    }
+    
+    /**
+     * Carga el rol desde Room y lo guarda en SharedPreferences.
+     */
+    private void loadRoleFromRoomAndSave(String email) {
+        ioExecutor.execute(() -> {
+            try {
+                User localUser = userDao.findByEmail(email);
+                String rol = "USUARIO_NORMAL";
+                if (localUser != null && localUser.getRol() != null && !localUser.getRol().isEmpty()) {
+                    rol = localUser.getRol();
+                }
+                saveUserRoleToPrefs(email, rol);
+            } catch (Exception ex) {
+                // Error silencioso, usar valor por defecto
+                saveUserRoleToPrefs(email, "USUARIO_NORMAL");
+            }
+        });
+    }
+    
+    /**
+     * Guarda el email y rol del usuario en SharedPreferences.
+     */
+    private void saveUserRoleToPrefs(String email, String rol) {
+        SharedPreferences sessionPrefs = getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sessionPrefs.edit();
+        editor.putString("CURRENT_USER_EMAIL", email);
+        editor.putString("CURRENT_USER_ROL", rol);
+        editor.apply();
+    }
+
     private void syncUserToFirestore(String email) {
         if (firestore == null) {
             return;
@@ -348,8 +569,74 @@ public class LoginActivity extends AppCompatActivity {
         editor.apply();
     }
 
+    private void setupKeyboardScroll() {
+        final ScrollView scrollView = findViewById(R.id.scrollView);
+        if (scrollView != null) {
+            scrollView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+                @Override
+                public void onGlobalLayout() {
+                    // Obtener la altura actual de la vista raíz
+                    View rootView = getWindow().getDecorView().findViewById(android.R.id.content);
+                    int heightDiff = rootView.getRootView().getHeight() - rootView.getHeight();
+                    
+                    // Si la diferencia es significativa, el teclado está visible
+                    if (heightDiff > 200) {
+                        // Hacer scroll al campo activo
+                        View focusedView = getCurrentFocus();
+                        if (focusedView != null) {
+                            scrollView.post(() -> {
+                                int scrollAmount = focusedView.getBottom() - (scrollView.getHeight() - 300);
+                                if (scrollAmount > 0) {
+                                    scrollView.smoothScrollBy(0, scrollAmount);
+                                }
+                            });
+                        }
+                    }
+                }
+            });
+        }
+        
+        // También agregar listeners a los campos para hacer scroll cuando se enfocan
+        etEmail.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                scrollToView(v);
+            }
+        });
+        
+        etPassword.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                scrollToView(v);
+            }
+        });
+        
+        etPhoneNumber.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                scrollToView(v);
+            }
+        });
+    }
+    
+    private void scrollToView(View view) {
+        ScrollView scrollView = findViewById(R.id.scrollView);
+        if (scrollView != null) {
+            scrollView.post(() -> {
+                int[] location = new int[2];
+                view.getLocationInWindow(location);
+                int scrollY = location[1] - 200; // Dejar un margen de 200px desde arriba
+                if (scrollY > 0) {
+                    scrollView.smoothScrollTo(0, scrollY);
+                }
+            });
+        }
+    }
+
     private void goToMainScreen() {
+        // Obtener rol guardado en SharedPreferences
+        SharedPreferences sessionPrefs = getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
+        String userRol = sessionPrefs.getString("CURRENT_USER_ROL", "USUARIO_NORMAL");
+        
         Intent intent = new Intent(LoginActivity.this, NavegacionActivity.class);
+        intent.putExtra("USER_TYPE", userRol);
         startActivity(intent);
         finish();
     }

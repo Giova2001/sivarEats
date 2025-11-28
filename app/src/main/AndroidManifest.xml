@@ -60,8 +60,16 @@
             android:name=".ui.profile.EditProfileActivity"
             android:exported="false" />
         <activity
-            android:name=".LOGIN.LoginActivity"
+            android:name=".ui.restaurant.AgregarPlatilloActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".ui.restaurant.RestaurantDetailActivity"
             android:exported="false" />
+        <activity
+            android:name=".LOGIN.LoginActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".LOGIN.LoginRegisterActivity"
             android:exported="false" />

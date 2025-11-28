@@ -4,6 +4,7 @@ public class Producto {
     private String nombre;
     private String descripcion;
     private int imagenResId;
+    private String imagenUrl; // URL de imagen desde Firestore/Cloudinary
     private double precio;
     private int cantidad;
     private String categoria; // "restaurantes", "china", "pizza", "favoritos", "todos"
@@ -33,6 +34,19 @@ public class Producto {
         this.nombre = nombre;
         this.descripcion = descripcion;
         this.imagenResId = imagenResId;
+        this.imagenUrl = null;
+        this.precio = precio;
+        this.cantidad = cantidad;
+        this.categoria = categoria != null ? categoria : "todos";
+        this.restaurante = restaurante != null ? restaurante : "";
+    }
+    
+    // Constructor para productos desde Firestore con URL de imagen
+    public Producto(String nombre, String descripcion, String imagenUrl, double precio, int cantidad, String categoria, String restaurante) {
+        this.nombre = nombre;
+        this.descripcion = descripcion;
+        this.imagenResId = 0; // Sin resource ID
+        this.imagenUrl = imagenUrl;
         this.precio = precio;
         this.cantidad = cantidad;
         this.categoria = categoria != null ? categoria : "todos";
@@ -43,6 +57,7 @@ public class Producto {
     public String getNombre() { return nombre; }
     public String getDescripcion() { return descripcion; }
     public int getImagenResId() { return imagenResId; }
+    public String getImagenUrl() { return imagenUrl; }
     public double getPrecio() { return precio; }
     public int getCantidad() { return cantidad; }
     public String getCategoria() { return categoria; }

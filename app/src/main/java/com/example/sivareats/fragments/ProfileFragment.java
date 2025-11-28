@@ -27,6 +27,7 @@ import com.example.sivareats.ui.profile.SupportActivity;
 import com.example.sivareats.ui.profile.SobreAppActivity;
 import com.example.sivareats.ui.profile.UbicationActivity;
 import com.example.sivareats.LOGIN.LoginActivity;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -271,10 +272,21 @@ public class ProfileFragment extends Fragment {
     }
 
     private void logout() {
+        // Cerrar sesión de Firebase Auth
+        FirebaseAuth.getInstance().signOut();
+        
+        // Limpiar loginPrefs (datos de login guardados)
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.clear();
         editor.apply();
+        
+        // Limpiar SivarEatsPrefs (sesión actual)
+        SharedPreferences sessionPrefs = requireContext().getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
+        SharedPreferences.Editor sessionEditor = sessionPrefs.edit();
+        sessionEditor.clear();
+        sessionEditor.apply();
 
+        // Navegar a LoginActivity
         Intent intent = new Intent(requireContext(), LoginActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
