@@ -1,5 +1,6 @@
 package com.example.sivareats.fragments;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.TypedValue;
@@ -920,7 +921,7 @@ public class HomeFragment extends Fragment {
                 LinearLayout.LayoutParams.WRAP_CONTENT));
         contenedorRestaurante.setPadding(0, 0, 0, 24);
 
-        // Título del restaurante
+        // Título del restaurante (clickeable para abrir detalles)
         TextView tituloRestaurante = new TextView(getContext());
         tituloRestaurante.setText(nombreRestaurante);
         tituloRestaurante.setTextSize(22);
@@ -937,6 +938,15 @@ public class HomeFragment extends Fragment {
             tituloRestaurante.setTextColor(ContextCompat.getColor(getContext(), R.color.text_primary));
         }
         tituloRestaurante.setPadding(8, 16, 8, 12);
+        tituloRestaurante.setClickable(true);
+        tituloRestaurante.setFocusable(true);
+        tituloRestaurante.setOnClickListener(v -> {
+            // Navegar a la vista de detalles del restaurante
+            android.content.Intent intent = new android.content.Intent(getContext(), 
+                    com.example.sivareats.ui.restaurant.RestaurantDetailActivity.class);
+            intent.putExtra("RESTAURANT_NAME", nombreRestaurante);
+            startActivity(intent);
+        });
         contenedorRestaurante.addView(tituloRestaurante);
 
         // Contenedor horizontal para los productos
