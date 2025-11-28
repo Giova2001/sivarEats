@@ -98,6 +98,13 @@ public class CartFragment extends Fragment {
     }
 
     private void abrirEnvio() {
+        // Verificar si el carrito está vacío
+        List<CartItem> cartItems = adapter.getLista();
+        if (cartItems == null || cartItems.isEmpty()) {
+            Toast.makeText(getContext(), "El carrito está vacío. Agrega productos antes de continuar.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         EnvioFragment envioFragment = new EnvioFragment();
 
         requireActivity().getSupportFragmentManager()
@@ -171,11 +178,16 @@ public class CartFragment extends Fragment {
     }
 
     private void actualizarTotales(List<CartItem> cartItems) {
+        // Verificar si el carrito está vacío
+        boolean carritoVacio = cartItems == null || cartItems.isEmpty();
+
         // Calcular subtotal ANTES del descuento
         double subtotalSinDescuento = 0;
 
-        for (CartItem p : cartItems) {
-            subtotalSinDescuento += p.getPrecio() * p.getCantidad();
+        if (!carritoVacio) {
+            for (CartItem p : cartItems) {
+                subtotalSinDescuento += p.getPrecio() * p.getCantidad();
+            }
         }
 
         // Calcular descuento del 10% si hay un código válido aplicado
@@ -193,7 +205,8 @@ public class CartFragment extends Fragment {
             tvDescuento.setVisibility(View.GONE);
         }
 
-        double delivery = 1.50;
+        // Si el carrito está vacío, el delivery es 0.00, de lo contrario es 1.50
+        double delivery = carritoVacio ? 0.00 : 1.50;
         double total = subtotalConDescuento + delivery;
 
         // Mostrar subtotal (después del descuento si hay uno aplicado)

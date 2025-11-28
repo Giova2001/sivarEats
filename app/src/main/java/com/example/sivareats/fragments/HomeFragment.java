@@ -20,6 +20,7 @@ import com.example.sivareats.R;
 import com.example.sivareats.model.CartViewModel;
 import com.example.sivareats.model.Producto;
 import com.example.sivareats.utils.SearchHistoryManager;
+import com.example.sivareats.utils.FavoritosManager;
 import com.google.android.material.button.MaterialButton;
 
 import java.util.ArrayList;
@@ -29,6 +30,7 @@ public class HomeFragment extends Fragment {
 
     private static final String TAG = "HomeFragment";
     private SearchHistoryManager searchHistoryManager;
+    private FavoritosManager favoritosManager;
     private OnBackPressedCallback onBackPressedCallback;
 
     private FrameLayout overlayBusqueda;
@@ -104,6 +106,7 @@ public class HomeFragment extends Fragment {
             tvHistorialTitulo = view.findViewById(R.id.tvHistorialTitulo);
 
             searchHistoryManager = new SearchHistoryManager(requireContext());
+            favoritosManager = new FavoritosManager(requireContext());
 
             // Cargar todas las listas de productos PRIMERO
             todasLasOfertas = obtenerTodasLasOfertas();
@@ -891,6 +894,19 @@ public class HomeFragment extends Fragment {
             return productos;
         }
 
+        // Si se selecciona "favoritos", filtrar por favoritos
+        if ("favoritos".equals(categoriaSeleccionada)) {
+            List<Producto> filtrados = new ArrayList<>();
+            List<String> favoritos = favoritosManager.getFavoritos();
+            for (Producto producto : productos) {
+                if (favoritos.contains(producto.getNombre())) {
+                    filtrados.add(producto);
+                }
+            }
+            return filtrados;
+        }
+
+        // Para otras categorías, filtrar por categoría
         List<Producto> filtrados = new ArrayList<>();
         for (Producto producto : productos) {
             if (categoriaSeleccionada.equals(producto.getCategoria())) {
@@ -963,6 +979,7 @@ public class HomeFragment extends Fragment {
                 TextView descripcion = itemView.findViewById(R.id.txtDescripcionProducto);
                 TextView precio = itemView.findViewById(R.id.tvPrecioProductoOferta);
                 View btnAgregar = itemView.findViewById(R.id.btnAgregarCarrito);
+                ImageView btnFavorito = itemView.findViewById(R.id.btnFavorito);
 
                 // Asignar imagen del producto
                 imgProducto.setImageResource(p.getImagenResId());
@@ -970,6 +987,24 @@ public class HomeFragment extends Fragment {
                 nombre.setText(p.getNombre());
                 descripcion.setText(p.getDescripcion());
                 precio.setText("$" + String.format("%.2f", p.getPrecio()));
+
+                // Configurar estado inicial del corazón (favorito o no)
+                boolean esFavorito = favoritosManager.esFavorito(p.getNombre());
+                actualizarIconoFavorito(btnFavorito, esFavorito);
+
+                // Listener para el botón de favorito
+                btnFavorito.setOnClickListener(v -> {
+                    boolean esFav = favoritosManager.esFavorito(p.getNombre());
+                    if (esFav) {
+                        favoritosManager.removerFavorito(p.getNombre());
+                        actualizarIconoFavorito(btnFavorito, false);
+                        Toast.makeText(getContext(), "Removido de favoritos", Toast.LENGTH_SHORT).show();
+                    } else {
+                        favoritosManager.agregarFavorito(p.getNombre());
+                        actualizarIconoFavorito(btnFavorito, true);
+                        Toast.makeText(getContext(), "Agregado a favoritos", Toast.LENGTH_SHORT).show();
+                    }
+                });
 
                 btnAgregar.setOnClickListener(v -> {
                     // Crear CartItem a partir de Producto
@@ -996,6 +1031,17 @@ public class HomeFragment extends Fragment {
             } catch (Exception e) {
                 Log.e(TAG, "Error al agregar producto " + p.getNombre(), e);
             }
+        }
+    }
+
+    // Método auxiliar para actualizar el icono del corazón
+    private void actualizarIconoFavorito(ImageView btnFavorito, boolean esFavorito) {
+        if (esFavorito) {
+            btnFavorito.setImageResource(R.drawable.ic_corazon_filled);
+            btnFavorito.setColorFilter(0xFF1F41EC);
+        } else {
+            btnFavorito.setImageResource(R.drawable.ic_corazon);
+            btnFavorito.setColorFilter(0xFF1F41EC);
         }
     }
 }
