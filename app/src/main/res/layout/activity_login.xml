@@ -4,7 +4,7 @@
     android:id="@+id/scrollView"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/white"
+    android:background="@color/background"
     android:fillViewport="true"
     android:scrollbars="none"
     android:fitsSystemWindows="true"
@@ -41,7 +41,7 @@
             android:fontFamily="@font/inter"
             android:gravity="center"
             android:text="Inicia sesión en tu cuenta"
-            android:textColor="@android:color/black"
+            android:textColor="?attr/colorOnSurface"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -54,7 +54,7 @@
             app:cardElevation="2dp"
             app:strokeColor="@color/info"
             app:strokeWidth="1dp"
-            app:cardBackgroundColor="@android:color/white">
+            app:cardBackgroundColor="?attr/colorSurface">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -83,7 +83,7 @@
                     android:layout_weight="1"
                     android:background="@android:color/transparent"
                     android:text="Número de teléfono"
-                    android:textColor="@android:color/black"
+                    android:textColor="?attr/colorOnSurface"
                     android:textAllCaps="false"
                     android:textSize="14sp"
                     android:padding="0dp"
@@ -196,7 +196,8 @@
             android:id="@+id/checkBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Guardar datos de inicio de sesion" />
+            android:text="Guardar datos de inicio de sesion"
+            android:textColor="?attr/colorOnSurface" />
 
         <Button
             android:id="@+id/btnLogin"
@@ -236,7 +237,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="No tienes cuenta? "
-                    android:textColor="@android:color/black"
+                    android:textColor="?attr/colorOnSurface"
                     android:textSize="14sp" />
 
                 <TextView
