@@ -60,6 +60,8 @@ dependencies {
     implementation("androidx.compose.material3:material3-adaptive-navigation-suite:1.3.0")
     implementation(libs.play.services.maps)
     implementation(libs.play.services.location)
+    implementation("com.google.maps:google-maps-services:2.2.0")
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
     debugImplementation(libs.ui.tooling)
     debugImplementation(libs.ui.test.manifest)
 

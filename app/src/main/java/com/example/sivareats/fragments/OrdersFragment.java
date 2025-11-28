@@ -105,6 +105,15 @@ public class OrdersFragment extends Fragment {
                     intent.putExtra("pedido_id", pedido.getId());
                     intent.putExtra("restaurante_name", restauranteName);
                     startActivityForResult(intent, 1001);
+                } else if (isRepartidor) {
+                    // Si es repartidor, abrir RastreandoPedidoActivity con datos del pedido
+                    Intent intent = new Intent(getContext(), RastreandoPedidoActivity.class);
+                    intent.putExtra("pedido_id", pedido.getId());
+                    intent.putExtra("restaurante", pedido.getRestaurante());
+                    intent.putExtra("direccion", pedido.getDireccion());
+                    intent.putExtra("cliente_email", pedido.getClienteEmail());
+                    intent.putExtra("is_repartidor", true);
+                    startActivity(intent);
                 } else {
                     // Si es usuario normal, abrir RastreandoPedidoActivity
                     Intent intent = new Intent(getContext(), RastreandoPedidoActivity.class);

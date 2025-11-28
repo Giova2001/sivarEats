@@ -186,6 +186,18 @@ public class OrdenesAdapter extends RecyclerView.Adapter<OrdenesAdapter.ViewHold
                     holder.btnRastrear.setText("Ver detalles");
                 }
             }
+        } else if (isRepartidor) {
+            // Para repartidores, siempre mostrar botón Rastrear si el pedido está en camino o entregado
+            if ("en_camino".equals(pedido.getEstado()) || "entregado_repartidor".equals(pedido.getEstado())) {
+                if (holder.btnRastrear != null) {
+                    holder.btnRastrear.setVisibility(View.VISIBLE);
+                    holder.btnRastrear.setText("Rastrear");
+                }
+            } else {
+                if (holder.btnRastrear != null) {
+                    holder.btnRastrear.setVisibility(View.GONE);
+                }
+            }
         } else {
             // Para usuarios normales
             if (pedido.getEstado().equals("activo") || pedido.getEstado().equals("preparacion")) {
