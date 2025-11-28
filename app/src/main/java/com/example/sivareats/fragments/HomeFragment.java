@@ -29,8 +29,10 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.bumptech.glide.Glide;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class HomeFragment extends Fragment {
 
@@ -847,10 +849,27 @@ public class HomeFragment extends Fragment {
     private void mostrarRestaurantesAgrupados(LayoutInflater inflater) {
         layoutRestaurantesAgrupados.removeAllViews();
 
-        // Obtener todos los productos
+        // Obtener todos los productos sin duplicados usando un Set
+        Set<String> productosVistos = new HashSet<>();
         List<Producto> todosLosProductos = new ArrayList<>();
-        todosLosProductos.addAll(todasLasOfertas);
-        todosLosProductos.addAll(todosLosRecomendados);
+        
+        // Agregar productos de todasLasOfertas
+        for (Producto p : todasLasOfertas) {
+            String key = (p.getRestaurante() != null ? p.getRestaurante() : "") + "|" + p.getNombre();
+            if (!productosVistos.contains(key)) {
+                productosVistos.add(key);
+                todosLosProductos.add(p);
+            }
+        }
+        
+        // Agregar productos de todosLosRecomendados que no estén ya en la lista
+        for (Producto p : todosLosRecomendados) {
+            String key = (p.getRestaurante() != null ? p.getRestaurante() : "") + "|" + p.getNombre();
+            if (!productosVistos.contains(key)) {
+                productosVistos.add(key);
+                todosLosProductos.add(p);
+            }
+        }
 
         // Agrupar por restaurante (solo restaurantes con al menos un platillo visible)
         java.util.Map<String, List<Producto>> restaurantesMap = new java.util.HashMap<>();
@@ -1164,6 +1183,9 @@ public class HomeFragment extends Fragment {
             return;
         }
         
+        // Usar un Set para rastrear platillos ya agregados y evitar duplicados
+        Set<String> platillosAgregados = new HashSet<>();
+        
         db.collection("restaurantes")
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
@@ -1182,6 +1204,9 @@ public class HomeFragment extends Fragment {
                         // Obtener platillos directamente del documento del restaurante
                         Map<String, Object> data = restauranteDoc.getData();
                         if (data != null) {
+                            // Set local para evitar duplicados dentro del mismo documento
+                            Set<String> platillosEnDocumento = new HashSet<>();
+                            
                             for (Map.Entry<String, Object> entry : data.entrySet()) {
                                 // Verificar si es un platillo (tiene la estructura esperada)
                                 Object value = entry.getValue();
@@ -1190,16 +1215,52 @@ public class HomeFragment extends Fragment {
                                     Map<String, Object> platilloData = (Map<String, Object>) value;
                                     // Verificar que tenga los campos de un platillo y que sea visible
                                     if (platilloData.containsKey("nombrePlatillo")) {
+                                        String nombrePlatillo = (String) platilloData.get("nombrePlatillo");
+                                        
+                                        // Verificar duplicados dentro del mismo documento
+                                        String keyLocal = nombreRestaurante + "|" + nombrePlatillo;
+                                        if (platillosEnDocumento.contains(keyLocal)) {
+                                            Log.d(TAG, "Platillo duplicado ignorado (dentro del mismo documento): " + keyLocal);
+                                            continue;
+                                        }
+                                        platillosEnDocumento.add(keyLocal);
+                                        
                                         Boolean visible = (Boolean) platilloData.get("visible");
                                         if (visible == null || visible) { // Solo mostrar platillos visibles
                                             try {
-                                                String nombrePlatillo = (String) platilloData.get("nombrePlatillo");
                                                 String descripcion = (String) platilloData.get("Descripcion");
                                                 String categoria = (String) platilloData.get("categoria");
                                                 String imagenUrl = (String) platilloData.get("URL_imagen_platillo");
                                                 Double precio = (Double) platilloData.get("precio");
                                                 
                                                 if (nombrePlatillo != null && precio != null) {
+                                                    // Crear clave única para verificar duplicados
+                                                    String productoKey = nombreRestaurante + "|" + nombrePlatillo;
+                                                    
+                                                    // Verificar si ya fue agregado en esta ejecución
+                                                    if (platillosAgregados.contains(productoKey)) {
+                                                        Log.d(TAG, "Platillo duplicado ignorado (ya en esta carga): " + productoKey);
+                                                        continue;
+                                                    }
+                                                    
+                                                    // Verificar si ya existe en las listas actuales (productos estáticos o de Firestore)
+                                                    // Si un platillo de Firestore tiene el mismo nombre y restaurante que uno existente,
+                                                    // no lo agregamos para evitar duplicados
+                                                    boolean yaExiste = false;
+                                                    for (Producto p : todasLasOfertas) {
+                                                        if (p.getNombre().equals(nombrePlatillo) && 
+                                                            p.getRestaurante() != null && 
+                                                            p.getRestaurante().equals(nombreRestaurante)) {
+                                                            yaExiste = true;
+                                                            Log.d(TAG, "Platillo duplicado ignorado (ya existe en listas): " + productoKey);
+                                                            break;
+                                                        }
+                                                    }
+                                                    
+                                                    if (yaExiste) {
+                                                        continue;
+                                                    }
+                                                    
                                                     // Crear Producto desde Firestore con URL de imagen
                                                     Producto producto;
                                                     if (imagenUrl != null && !imagenUrl.isEmpty()) {
@@ -1226,12 +1287,16 @@ public class HomeFragment extends Fragment {
                                                         );
                                                     }
                                                     
+                                                    // Agregar a las listas y marcar como agregado
                                                     platillosFirestore.add(producto);
+                                                    platillosAgregados.add(productoKey);
                                                     
-                                                    // Agregar a las listas principales
+                                                    // Agregar solo a todasLasOfertas para evitar duplicados
+                                                    // (no agregar a todosLosRecomendados porque causaría duplicación)
                                                     todasLasOfertas.add(producto);
-                                                    todosLosRecomendados.add(producto);
                                                     todosLosProductos.add(producto);
+                                                    
+                                                    Log.d(TAG, "Platillo agregado desde Firestore: " + productoKey);
                                                 }
                                             } catch (Exception e) {
                                                 Log.e(TAG, "Error al procesar platillo: " + e.getMessage());
