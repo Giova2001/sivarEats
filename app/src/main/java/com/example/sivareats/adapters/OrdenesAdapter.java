@@ -1,10 +1,14 @@
 package com.example.sivareats.adapters;
 
+import android.content.Context;
 import android.content.Intent;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -13,10 +17,15 @@ import com.example.sivareats.R;
 import com.example.sivareats.model.Pedido;
 import com.example.sivareats.ui.ordenes.RastreandoPedidoActivity;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.textfield.MaterialAutoCompleteTextView;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class OrdenesAdapter extends RecyclerView.Adapter<OrdenesAdapter.ViewHolder> {
 
@@ -55,11 +64,18 @@ public class OrdenesAdapter extends RecyclerView.Adapter<OrdenesAdapter.ViewHold
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        // Si es restaurante, usar layout especial
-        int layoutId = isRestaurante ? R.layout.item_orden_restaurante : R.layout.item_orden;
+        // Determinar layout según tipo de usuario
+        int layoutId;
+        if (isRestaurante) {
+            layoutId = R.layout.item_orden_restaurante;
+        } else if (isRepartidor) {
+            layoutId = R.layout.item_orden_repartidor;
+        } else {
+            layoutId = R.layout.item_orden;
+        }
         View view = LayoutInflater.from(parent.getContext())
                 .inflate(layoutId, parent, false);
-        return new ViewHolder(view, isRestaurante);
+        return new ViewHolder(view, isRestaurante, isRepartidor);
     }
 
     @Override
@@ -73,6 +89,14 @@ public class OrdenesAdapter extends RecyclerView.Adapter<OrdenesAdapter.ViewHold
                 estadoTexto = "Pendiente";
             } else if ("preparacion".equals(pedido.getEstado())) {
                 estadoTexto = "En preparación";
+            } else {
+                estadoTexto = "Completado";
+            }
+        } else if (isRepartidor) {
+            if ("en_camino".equals(pedido.getEstado())) {
+                estadoTexto = "En camino";
+            } else if ("entregado".equals(pedido.getEstado())) {
+                estadoTexto = "Entregado";
             } else {
                 estadoTexto = "Completado";
             }
@@ -101,10 +125,15 @@ public class OrdenesAdapter extends RecyclerView.Adapter<OrdenesAdapter.ViewHold
                 }
             }
         } else {
-            // Para usuarios normales, mostrar restaurante
+            // Para usuarios normales y repartidores, mostrar restaurante
             if (holder.tvRestaurante != null) {
                 holder.tvRestaurante.setText(pedido.getRestaurante());
             }
+        }
+        
+        // Configurar spinner de estados para repartidores
+        if (isRepartidor && holder.spinnerEstado != null) {
+            configurarSpinnerRepartidor(holder, pedido);
         }
 
         // Productos
@@ -260,8 +289,137 @@ public class OrdenesAdapter extends RecyclerView.Adapter<OrdenesAdapter.ViewHold
             btnDetalles = itemView.findViewById(R.id.btnDetalles);
         }
         
+        MaterialAutoCompleteTextView spinnerEstado; // Para repartidores
+        
         public ViewHolder(@NonNull View itemView, boolean isRestaurante) {
             this(itemView);
+        }
+        
+        public ViewHolder(@NonNull View itemView, boolean isRestaurante, boolean isRepartidor) {
+            this(itemView);
+            if (isRepartidor) {
+                spinnerEstado = itemView.findViewById(R.id.spinnerEstado);
+            }
+        }
+    }
+    
+    private void configurarSpinnerRepartidor(ViewHolder holder, Pedido pedido) {
+        if (holder.spinnerEstado == null) return;
+        
+        String estadoActual = pedido.getEstado();
+        List<String> estadosDisponibles = new ArrayList<>();
+        
+        // Agregar estado actual
+        estadosDisponibles.add(obtenerNombreEstadoRepartidor(estadoActual));
+        
+        // Agregar estados siguientes según el estado actual
+        if ("en_camino".equals(estadoActual)) {
+            estadosDisponibles.add(obtenerNombreEstadoRepartidor("entregado"));
+        }
+        // Si está en "entregado", no hay más estados
+        
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(holder.itemView.getContext(),
+                android.R.layout.simple_dropdown_item_1line, estadosDisponibles);
+        holder.spinnerEstado.setAdapter(adapter);
+        holder.spinnerEstado.setText(obtenerNombreEstadoRepartidor(estadoActual), false);
+        
+        // Listener para cambios de estado
+        holder.spinnerEstado.setOnItemClickListener((parent, view, position, id) -> {
+            String nuevoEstadoNombre = (String) parent.getItemAtPosition(position);
+            String nuevoEstadoCodigo = obtenerCodigoEstadoRepartidor(nuevoEstadoNombre);
+            
+            if (nuevoEstadoCodigo != null && !nuevoEstadoCodigo.equals(estadoActual)) {
+                cambiarEstadoPedidoRepartidor(pedido, nuevoEstadoCodigo, holder);
+            }
+        });
+    }
+    
+    private String obtenerNombreEstadoRepartidor(String codigo) {
+        switch (codigo) {
+            case "en_camino":
+                return "Pedido en camino";
+            case "entregado":
+                return "Pedido entregado";
+            default:
+                return codigo;
+        }
+    }
+    
+    private String obtenerCodigoEstadoRepartidor(String nombre) {
+        switch (nombre) {
+            case "Pedido en camino":
+                return "en_camino";
+            case "Pedido entregado":
+                return "entregado";
+            default:
+                return nombre;
+        }
+    }
+    
+    private void cambiarEstadoPedidoRepartidor(Pedido pedido, String nuevoEstado, ViewHolder holder) {
+        Context context = holder.itemView.getContext();
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        
+        // Validar progresión (solo puede avanzar de "en_camino" a "entregado")
+        String estadoActual = pedido.getEstado();
+        if (!"en_camino".equals(estadoActual) || !"entregado".equals(nuevoEstado)) {
+            Toast.makeText(context, "Solo se puede cambiar de 'En camino' a 'Entregado'", Toast.LENGTH_SHORT).show();
+            // Restaurar estado anterior
+            holder.spinnerEstado.setText(obtenerNombreEstadoRepartidor(estadoActual), false);
+            return;
+        }
+        
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("estado", nuevoEstado);
+        
+        String pedidoId = pedido.getId();
+        String restauranteName = pedido.getRestaurante();
+        String clienteEmail = pedido.getClienteEmail();
+        
+        // Obtener email del repartidor desde SharedPreferences
+        android.content.SharedPreferences prefs = context.getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
+        String repartidorEmail = prefs.getString("CURRENT_USER_EMAIL", null);
+        
+        if (repartidorEmail == null) {
+            Toast.makeText(context, "Error: No se pudo identificar al repartidor", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        // Actualizar en todas las colecciones relevantes
+        // 1. En la colección del repartidor
+        db.collection("users").document(repartidorEmail)
+                .collection("pedidos").document(pedidoId)
+                .update(updates)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d("OrdenesAdapter", "Estado actualizado en repartidor");
+                });
+        
+        // 2. En la colección del cliente
+        if (clienteEmail != null && !clienteEmail.isEmpty()) {
+            db.collection("users").document(clienteEmail)
+                    .collection("pedidos").document(pedidoId)
+                    .update(updates)
+                    .addOnSuccessListener(aVoid -> {
+                        Log.d("OrdenesAdapter", "Estado actualizado en cliente");
+                    });
+        }
+        
+        // 3. En pedidos_pendientes del restaurante
+        if (restauranteName != null && !restauranteName.isEmpty()) {
+            db.collection("restaurantes").document(restauranteName)
+                    .collection("pedidos_pendientes").document(pedidoId)
+                    .update(updates)
+                    .addOnSuccessListener(aVoid -> {
+                        Log.d("OrdenesAdapter", "Estado actualizado en restaurante");
+                        pedido.setEstado(nuevoEstado);
+                        Toast.makeText(context, "Estado actualizado: " + obtenerNombreEstadoRepartidor(nuevoEstado), Toast.LENGTH_SHORT).show();
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e("OrdenesAdapter", "Error al actualizar estado: " + e.getMessage());
+                        Toast.makeText(context, "Error al actualizar el estado", Toast.LENGTH_SHORT).show();
+                        // Restaurar estado anterior
+                        holder.spinnerEstado.setText(obtenerNombreEstadoRepartidor(estadoActual), false);
+                    });
         }
     }
 }
