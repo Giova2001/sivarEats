@@ -19,7 +19,9 @@ import com.example.sivareats.R;
 import com.example.sivareats.adapters.OrdenesAdapter;
 import com.example.sivareats.model.Pedido;
 import com.example.sivareats.model.Producto;
+import com.example.sivareats.model.UserType;
 import com.example.sivareats.ui.ordenes.RastreandoPedidoActivity;
+import com.example.sivareats.ui.restaurant.RevisarPedidoActivity;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -45,8 +47,11 @@ public class OrdersFragment extends Fragment {
 
     private FirebaseFirestore db;
     private String userEmail;
+    private String userRole;
+    private String restauranteName;
     private boolean isLoading = false; // Flag para prevenir cargas simultáneas
     private boolean isViewCreated = false; // Flag para saber si la vista ya fue creada
+    private boolean isRestaurante = false; // Flag para saber si el usuario es restaurante
 
     private static final String TAG = "OrdersFragment";
 
@@ -71,6 +76,16 @@ public class OrdersFragment extends Fragment {
         db = FirebaseFirestore.getInstance();
         SharedPreferences prefs = requireContext().getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
         userEmail = prefs.getString("CURRENT_USER_EMAIL", null);
+        userRole = prefs.getString("CURRENT_USER_ROL", null);
+        
+        // Verificar si el usuario es RESTAURANTE
+        UserType userType = UserType.fromString(userRole);
+        isRestaurante = (userType == UserType.RESTAURANTE);
+        
+        // Si es restaurante, obtener el nombre del restaurante
+        if (isRestaurante && userEmail != null) {
+            cargarNombreRestaurante();
+        }
 
         // Inicializar listas
         pedidosActivos = new ArrayList<>();
@@ -78,17 +93,26 @@ public class OrdersFragment extends Fragment {
         pedidosFiltrados = new ArrayList<>(pedidosActivos);
 
         // Configurar adapter con lista vacía inicial
-        adapter = new OrdenesAdapter(pedidosFiltrados);
+        adapter = new OrdenesAdapter(pedidosFiltrados, isRestaurante);
         adapter.setOnPedidoClickListener(new OrdenesAdapter.OnPedidoClickListener() {
             @Override
             public void onRastrearClick(Pedido pedido) {
-                Intent intent = new Intent(getContext(), RastreandoPedidoActivity.class);
-                intent.putExtra("pedido_id", pedido.getId());
-                intent.putExtra("restaurante", pedido.getRestaurante());
-                intent.putExtra("repartidor_nombre", pedido.getRepartidorNombre());
-                intent.putExtra("repartidor_telefono", pedido.getRepartidorTelefono());
-                intent.putExtra("tiempo_estimado", pedido.getTiempoEstimado());
-                startActivity(intent);
+                if (isRestaurante) {
+                    // Si es restaurante, abrir RevisarPedidoActivity
+                    Intent intent = new Intent(getContext(), RevisarPedidoActivity.class);
+                    intent.putExtra("pedido_id", pedido.getId());
+                    intent.putExtra("restaurante_name", restauranteName);
+                    startActivityForResult(intent, 1001);
+                } else {
+                    // Si es usuario normal, abrir RastreandoPedidoActivity
+                    Intent intent = new Intent(getContext(), RastreandoPedidoActivity.class);
+                    intent.putExtra("pedido_id", pedido.getId());
+                    intent.putExtra("restaurante", pedido.getRestaurante());
+                    intent.putExtra("repartidor_nombre", pedido.getRepartidorNombre());
+                    intent.putExtra("repartidor_telefono", pedido.getRepartidorTelefono());
+                    intent.putExtra("tiempo_estimado", pedido.getTiempoEstimado());
+                    startActivity(intent);
+                }
             }
 
             @Override
@@ -153,6 +177,17 @@ public class OrdersFragment extends Fragment {
         super.onPause();
         isViewCreated = false;
     }
+    
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 1001 && resultCode == android.app.Activity.RESULT_OK) {
+            // Recargar pedidos después de aceptar/rechazar
+            if (isViewCreated && userEmail != null && !isLoading) {
+                cargarPedidosDesdeFirebase();
+            }
+        }
+    }
 
     private void cargarPedidosDesdeFirebase() {
         // Prevenir cargas simultáneas
@@ -165,6 +200,17 @@ public class OrdersFragment extends Fragment {
             Log.e(TAG, "Usuario no identificado, no se pueden cargar pedidos");
             // Usar datos de ejemplo si no hay usuario
             inicializarDatosEjemplo();
+            return;
+        }
+
+        // Si es restaurante, cargar pedidos pendientes
+        if (isRestaurante) {
+            if (restauranteName == null || restauranteName.isEmpty()) {
+                // Esperar a que se cargue el nombre del restaurante
+                cargarNombreRestaurante();
+                return;
+            }
+            cargarPedidosRestaurante();
             return;
         }
 
@@ -191,7 +237,7 @@ public class OrdersFragment extends Fragment {
                                 // Usar el ID del pedido como clave para evitar duplicados
                                 String pedidoId = pedido.getId();
 
-                                if ("activo".equals(pedido.getEstado())) {
+                                if ("activo".equals(pedido.getEstado()) || "preparacion".equals(pedido.getEstado())) {
                                     // Solo agregar si no existe ya
                                     if (!pedidosActivosMap.containsKey(pedidoId)) {
                                         pedidosActivosMap.put(pedidoId, pedido);
@@ -232,6 +278,137 @@ public class OrdersFragment extends Fragment {
                     inicializarDatosEjemplo();
                     actualizarVista();
                 });
+    }
+    
+    private void cargarNombreRestaurante() {
+        if (userEmail == null || userEmail.isEmpty()) {
+            return;
+        }
+        
+        db.collection("users").document(userEmail)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        restauranteName = documentSnapshot.getString("name");
+                        if (restauranteName != null && !restauranteName.isEmpty()) {
+                            cargarPedidosRestaurante();
+                        } else {
+                            Log.e(TAG, "Nombre de restaurante no encontrado");
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error al cargar nombre del restaurante: " + e.getMessage());
+                });
+    }
+    
+    private void cargarPedidosRestaurante() {
+        if (restauranteName == null || restauranteName.isEmpty()) {
+            Log.e(TAG, "Nombre de restaurante no disponible");
+            return;
+        }
+        
+        isLoading = true;
+        
+        // Limpiar listas antes de cargar nuevos datos
+        pedidosActivos.clear();
+        pedidosCompletados.clear();
+        
+        // Usar un mapa para evitar duplicados
+        Map<String, Pedido> pedidosPendientesMap = new HashMap<>();
+        Map<String, Pedido> pedidosEnPreparacionMap = new HashMap<>();
+        
+        // Cargar pedidos pendientes (estado "pendiente")
+        db.collection("restaurantes").document(restauranteName)
+                .collection("pedidos_pendientes")
+                .whereEqualTo("estado", "pendiente")
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                        try {
+                            Pedido pedido = convertirDocumentoAPedidoRestaurante(document);
+                            if (pedido != null && pedido.getId() != null) {
+                                String pedidoId = pedido.getId();
+                                if (!pedidosPendientesMap.containsKey(pedidoId)) {
+                                    pedidosPendientesMap.put(pedidoId, pedido);
+                                }
+                            }
+                        } catch (Exception e) {
+                            Log.e(TAG, "Error al convertir documento a pedido: " + e.getMessage());
+                        }
+                    }
+                    
+                    // Cargar pedidos en preparación y completados desde la colección del restaurante
+                    // (donde se guarda la copia para seguimiento)
+                    if (userEmail != null && !userEmail.isEmpty()) {
+                        db.collection("users").document(userEmail)
+                                .collection("pedidos")
+                                .get()
+                                .addOnSuccessListener(queryDocumentSnapshots2 -> {
+                                    isLoading = false;
+                                    
+                                    Map<String, Pedido> pedidosCompletadosMap = new HashMap<>();
+                                    
+                                    for (QueryDocumentSnapshot document : queryDocumentSnapshots2) {
+                                        try {
+                                            Pedido pedido = convertirDocumentoAPedido(document);
+                                            if (pedido != null && pedido.getId() != null) {
+                                                String pedidoId = pedido.getId();
+                                                String estado = pedido.getEstado();
+                                                
+                                                if ("preparacion".equals(estado)) {
+                                                    // Agregar a pedidos en preparación
+                                                    if (!pedidosEnPreparacionMap.containsKey(pedidoId)) {
+                                                        pedidosEnPreparacionMap.put(pedidoId, pedido);
+                                                    }
+                                                } else if ("completado".equals(estado) || "rechazado".equals(estado)) {
+                                                    // Agregar a pedidos completados
+                                                    if (!pedidosCompletadosMap.containsKey(pedidoId)) {
+                                                        pedidosCompletadosMap.put(pedidoId, pedido);
+                                                    }
+                                                }
+                                            }
+                                        } catch (Exception e) {
+                                            Log.e(TAG, "Error al convertir documento a pedido: " + e.getMessage());
+                                        }
+                                    }
+                                    
+                                    // Combinar pedidos pendientes y en preparación en activos
+                                    pedidosActivos = new ArrayList<>(pedidosPendientesMap.values());
+                                    pedidosActivos.addAll(pedidosEnPreparacionMap.values());
+                                    
+                                    // Agregar pedidos completados
+                                    pedidosCompletados = new ArrayList<>(pedidosCompletadosMap.values());
+                                    
+                                    // Ordenar por fecha (más recientes primero)
+                                    pedidosActivos.sort((p1, p2) -> p2.getFecha().compareTo(p1.getFecha()));
+                                    pedidosCompletados.sort((p1, p2) -> p2.getFecha().compareTo(p1.getFecha()));
+                                    
+                                    // Actualizar la vista
+                                    actualizarVista();
+                                    
+                                    Log.d(TAG, "Pedidos restaurante cargados: " + pedidosActivos.size() + " activos, " + pedidosCompletados.size() + " completados");
+                                })
+                                .addOnFailureListener(e -> {
+                                    isLoading = false;
+                                    Log.e(TAG, "Error al cargar pedidos del restaurante: " + e.getMessage());
+                                    actualizarVista();
+                                });
+                    } else {
+                        isLoading = false;
+                        actualizarVista();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    isLoading = false;
+                    Log.e(TAG, "Error al cargar pedidos pendientes: " + e.getMessage());
+                    actualizarVista();
+                });
+    }
+    
+    private Pedido convertirDocumentoAPedidoRestaurante(QueryDocumentSnapshot document) {
+        // Similar a convertirDocumentoAPedido pero adaptado para pedidos de restaurante
+        return convertirDocumentoAPedido(document);
     }
 
     private Pedido convertirDocumentoAPedido(QueryDocumentSnapshot document) {
@@ -295,6 +472,10 @@ public class OrdersFragment extends Fragment {
             String repartidorTelefono = document.getString("repartidorTelefono");
             if (repartidorNombre != null) pedido.setRepartidorNombre(repartidorNombre);
             if (repartidorTelefono != null) pedido.setRepartidorTelefono(repartidorTelefono);
+            
+            // Obtener email del cliente si está disponible (para pedidos de restaurante)
+            String clienteEmail = document.getString("clienteEmail");
+            if (clienteEmail != null) pedido.setClienteEmail(clienteEmail);
 
             return pedido;
         } catch (Exception e) {

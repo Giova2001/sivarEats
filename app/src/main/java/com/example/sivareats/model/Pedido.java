@@ -14,6 +14,7 @@ public class Pedido {
     private String repartidorNombre;
     private String repartidorTelefono;
     private int tiempoEstimado; // en minutos
+    private String clienteEmail; // Email del cliente (para pedidos de restaurante)
 
     public Pedido(String id, String restaurante, String direccion, double total, 
                   String estado, Date fecha, List<Producto> productos) {
@@ -37,6 +38,7 @@ public class Pedido {
     public String getRepartidorNombre() { return repartidorNombre; }
     public String getRepartidorTelefono() { return repartidorTelefono; }
     public int getTiempoEstimado() { return tiempoEstimado; }
+    public String getClienteEmail() { return clienteEmail; }
 
     // Setters
     public void setRepartidorNombre(String repartidorNombre) { 
@@ -50,6 +52,9 @@ public class Pedido {
     }
     public void setEstado(String estado) { 
         this.estado = estado; 
+    }
+    public void setClienteEmail(String clienteEmail) {
+        this.clienteEmail = clienteEmail;
     }
 }
 

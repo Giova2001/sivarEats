@@ -1184,14 +1184,15 @@ public class HomeFragment extends Fragment {
                 });
 
                 btnAgregar.setOnClickListener(v -> {
-                    // Crear CartItem a partir de Producto
+                    // Crear CartItem a partir de Producto, incluyendo el restaurante
                     com.example.sivareats.data.cart.CartItem item =
                             new com.example.sivareats.data.cart.CartItem(
                                     p.getNombre(),
                                     p.getDescripcion(),
                                     p.getImagenResId(), // usa resource id
                                     p.getPrecio(),
-                                    1 // cantidad inicial
+                                    1, // cantidad inicial
+                                    p.getRestaurante() // restaurante del producto
                             );
 
                     // Insertar en DB en background

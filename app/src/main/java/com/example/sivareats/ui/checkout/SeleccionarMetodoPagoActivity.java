@@ -469,6 +469,10 @@ public class SeleccionarMetodoPagoActivity extends AppCompatActivity {
                             item.getPrecio(),
                             item.getCantidad()
                     );
+                    // Establecer el restaurante del producto desde el CartItem
+                    if (item.getRestaurante() != null && !item.getRestaurante().isEmpty()) {
+                        producto.setRestaurante(item.getRestaurante());
+                    }
                     productos.add(producto);
                     subtotal += item.getPrecio() * item.getCantidad();
                 }
@@ -500,14 +504,14 @@ public class SeleccionarMetodoPagoActivity extends AppCompatActivity {
                 // Crear ID único para el pedido
                 String pedidoId = "PED" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
-                // Determinar restaurante (usar valor por defecto o extraer si está disponible)
-                // Por ahora usamos un valor genérico, pero puedes mejorarlo extrayendo del nombre
-                restaurante = "Restaurante";
+                // Determinar restaurante buscando en Firebase qué restaurante tiene estos productos
+                // Por ahora, buscar el restaurante del primer producto o usar valor por defecto
+                final String restauranteFinal = obtenerRestauranteDesdeProductos(productos);
 
                 // Crear mapa de datos para Firebase
                 Map<String, Object> pedidoData = new HashMap<>();
                 pedidoData.put("id", pedidoId);
-                pedidoData.put("restaurante", restaurante);
+                pedidoData.put("restaurante", restauranteFinal);
                 pedidoData.put("direccion", direccion);
                 pedidoData.put("total", total);
                 pedidoData.put("subtotal", subtotal);
@@ -543,6 +547,23 @@ public class SeleccionarMetodoPagoActivity extends AppCompatActivity {
                         .set(pedidoData)
                         .addOnSuccessListener(aVoid -> {
                             Log.d("SeleccionarMetodoPago", "Pedido guardado en Firebase: " + pedidoId);
+
+                            // También guardar en la colección del restaurante para que el restaurante lo vea
+                            if (restauranteFinal != null && !restauranteFinal.isEmpty() && !restauranteFinal.equals("Restaurante")) {
+                                Map<String, Object> pedidoRestauranteData = new HashMap<>(pedidoData);
+                                pedidoRestauranteData.put("estado", "pendiente"); // Estado pendiente para restaurante
+                                pedidoRestauranteData.put("clienteEmail", userEmail); // Email del cliente
+                                
+                                db.collection("restaurantes").document(restauranteFinal)
+                                        .collection("pedidos_pendientes").document(pedidoId)
+                                        .set(pedidoRestauranteData)
+                                        .addOnSuccessListener(aVoid2 -> {
+                                            Log.d("SeleccionarMetodoPago", "Pedido guardado en restaurante: " + restauranteFinal);
+                                        })
+                                        .addOnFailureListener(e -> {
+                                            Log.e("SeleccionarMetodoPago", "Error al guardar pedido en restaurante: " + e.getMessage());
+                                        });
+                            }
 
                             // Limpiar el carrito después de guardar el pedido exitosamente
                             executor.execute(() -> {
@@ -617,5 +638,44 @@ public class SeleccionarMetodoPagoActivity extends AppCompatActivity {
         if (metodoPagoItems.size() <= 1) { // Solo efectivo
             loadPaymentMethods();
         }
+    }
+    
+    /**
+     * Obtiene el restaurante desde los productos.
+     * Si todos los productos son del mismo restaurante, retorna ese restaurante.
+     * Si hay múltiples restaurantes, retorna el más común.
+     */
+    private String obtenerRestauranteDesdeProductos(List<Producto> productos) {
+        if (productos == null || productos.isEmpty()) {
+            return "Restaurante";
+        }
+        
+        // Contar restaurantes de todos los productos
+        Map<String, Integer> restaurantesCount = new HashMap<>();
+        for (Producto producto : productos) {
+            String rest = producto.getRestaurante();
+            if (rest != null && !rest.isEmpty() && !rest.equals("Restaurante")) {
+                restaurantesCount.put(rest, restaurantesCount.getOrDefault(rest, 0) + 1);
+            }
+        }
+        
+        // Si no hay restaurantes válidos, retornar por defecto
+        if (restaurantesCount.isEmpty()) {
+            Log.w("SeleccionarMetodoPago", "No se encontró restaurante en los productos, usando valor por defecto");
+            return "Restaurante";
+        }
+        
+        // Encontrar el restaurante más común
+        String restauranteMasComun = null;
+        int maxCount = 0;
+        for (Map.Entry<String, Integer> entry : restaurantesCount.entrySet()) {
+            if (entry.getValue() > maxCount) {
+                maxCount = entry.getValue();
+                restauranteMasComun = entry.getKey();
+            }
+        }
+        
+        Log.d("SeleccionarMetodoPago", "Restaurante identificado: " + restauranteMasComun + " (aparece " + maxCount + " veces)");
+        return restauranteMasComun != null ? restauranteMasComun : "Restaurante";
     }
 }
