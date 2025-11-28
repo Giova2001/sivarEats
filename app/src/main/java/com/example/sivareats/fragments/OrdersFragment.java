@@ -52,6 +52,7 @@ public class OrdersFragment extends Fragment {
     private boolean isLoading = false; // Flag para prevenir cargas simultáneas
     private boolean isViewCreated = false; // Flag para saber si la vista ya fue creada
     private boolean isRestaurante = false; // Flag para saber si el usuario es restaurante
+    private boolean isRepartidor = false; // Flag para saber si el usuario es repartidor
 
     private static final String TAG = "OrdersFragment";
 
@@ -78,9 +79,10 @@ public class OrdersFragment extends Fragment {
         userEmail = prefs.getString("CURRENT_USER_EMAIL", null);
         userRole = prefs.getString("CURRENT_USER_ROL", null);
         
-        // Verificar si el usuario es RESTAURANTE
+        // Verificar si el usuario es RESTAURANTE o REPARTIDOR
         UserType userType = UserType.fromString(userRole);
         isRestaurante = (userType == UserType.RESTAURANTE);
+        isRepartidor = (userType == UserType.REPARTIDOR);
         
         // Si es restaurante, obtener el nombre del restaurante
         if (isRestaurante && userEmail != null) {
@@ -92,8 +94,8 @@ public class OrdersFragment extends Fragment {
         pedidosCompletados = new ArrayList<>();
         pedidosFiltrados = new ArrayList<>(pedidosActivos);
 
-        // Configurar adapter con lista vacía inicial
-        adapter = new OrdenesAdapter(pedidosFiltrados, isRestaurante);
+        // Configurar adapter con lista vacía inicial (pasar también isRepartidor)
+        adapter = new OrdenesAdapter(pedidosFiltrados, isRestaurante, isRepartidor);
         adapter.setOnPedidoClickListener(new OrdenesAdapter.OnPedidoClickListener() {
             @Override
             public void onRastrearClick(Pedido pedido) {
@@ -237,19 +239,28 @@ public class OrdersFragment extends Fragment {
                                 // Usar el ID del pedido como clave para evitar duplicados
                                 String pedidoId = pedido.getId();
 
-                                if ("activo".equals(pedido.getEstado()) || "preparacion".equals(pedido.getEstado())) {
-                                    // Solo agregar si no existe ya
-                                    if (!pedidosActivosMap.containsKey(pedidoId)) {
-                                        pedidosActivosMap.put(pedidoId, pedido);
-                                    } else {
-                                        Log.w(TAG, "Pedido duplicado detectado y omitido: " + pedidoId);
+                                String estado = pedido.getEstado();
+                                // Para repartidores, considerar "en_camino" como activo
+                                if (isRepartidor) {
+                                    if ("en_camino".equals(estado)) {
+                                        if (!pedidosActivosMap.containsKey(pedidoId)) {
+                                            pedidosActivosMap.put(pedidoId, pedido);
+                                        }
+                                    } else if ("entregado".equals(estado) || "completado".equals(estado)) {
+                                        if (!pedidosCompletadosMap.containsKey(pedidoId)) {
+                                            pedidosCompletadosMap.put(pedidoId, pedido);
+                                        }
                                     }
                                 } else {
-                                    // Solo agregar si no existe ya
-                                    if (!pedidosCompletadosMap.containsKey(pedidoId)) {
-                                        pedidosCompletadosMap.put(pedidoId, pedido);
+                                    // Lógica para usuarios normales y restaurantes
+                                    if ("activo".equals(estado) || "preparacion".equals(estado)) {
+                                        if (!pedidosActivosMap.containsKey(pedidoId)) {
+                                            pedidosActivosMap.put(pedidoId, pedido);
+                                        }
                                     } else {
-                                        Log.w(TAG, "Pedido duplicado detectado y omitido: " + pedidoId);
+                                        if (!pedidosCompletadosMap.containsKey(pedidoId)) {
+                                            pedidosCompletadosMap.put(pedidoId, pedido);
+                                        }
                                     }
                                 }
                             }

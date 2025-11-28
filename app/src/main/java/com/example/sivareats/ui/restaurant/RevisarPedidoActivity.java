@@ -1,8 +1,11 @@
 package com.example.sivareats.ui.restaurant;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
@@ -14,6 +17,7 @@ import android.widget.Toast;
 
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 
+import androidx.core.app.ActivityCompat;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -21,6 +25,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.example.sivareats.R;
 import com.example.sivareats.model.Producto;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -39,6 +45,7 @@ public class RevisarPedidoActivity extends AppCompatActivity {
     private static final String TAG = "RevisarPedidoActivity";
     
     private FirebaseFirestore db;
+    private FusedLocationProviderClient fusedLocationClient;
     private String pedidoId;
     private String restauranteName;
     private String clienteEmail;
@@ -82,6 +89,7 @@ public class RevisarPedidoActivity extends AppCompatActivity {
         }
 
         db = FirebaseFirestore.getInstance();
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         
         // Obtener email del restaurante desde SharedPreferences
         SharedPreferences prefs = getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
@@ -578,9 +586,50 @@ public class RevisarPedidoActivity extends AppCompatActivity {
             return;
         }
         
+        // Si el nuevo estado es "entregado_repartidor", obtener ubicación actual
+        if ("entregado_repartidor".equals(nuevoEstado)) {
+            obtenerUbicacionYActualizarEstado(nuevoEstado);
+        } else {
+            actualizarEstadoEnFirebase(nuevoEstado, null, null);
+        }
+    }
+    
+    private void obtenerUbicacionYActualizarEstado(String nuevoEstado) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) 
+                != PackageManager.PERMISSION_GRANTED) {
+            // Si no hay permiso, actualizar sin ubicación
+            actualizarEstadoEnFirebase(nuevoEstado, null, null);
+            return;
+        }
+        
+        fusedLocationClient.getLastLocation()
+                .addOnSuccessListener(location -> {
+                    if (location != null) {
+                        double lat = location.getLatitude();
+                        double lng = location.getLongitude();
+                        actualizarEstadoEnFirebase(nuevoEstado, lat, lng);
+                    } else {
+                        // Si no se puede obtener ubicación, actualizar sin ella
+                        actualizarEstadoEnFirebase(nuevoEstado, null, null);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error al obtener ubicación: " + e.getMessage());
+                    // Actualizar sin ubicación
+                    actualizarEstadoEnFirebase(nuevoEstado, null, null);
+                });
+    }
+    
+    private void actualizarEstadoEnFirebase(String nuevoEstado, Double lat, Double lng) {
         // Actualizar estado en Firebase
         Map<String, Object> updates = new HashMap<>();
         updates.put("estado", nuevoEstado);
+        
+        // Si hay coordenadas, agregarlas
+        if (lat != null && lng != null) {
+            updates.put("restauranteLat", lat);
+            updates.put("restauranteLng", lng);
+        }
         
         // Actualizar en pedidos_pendientes si existe
         db.collection("restaurantes").document(restauranteName)

@@ -23,6 +23,7 @@ public class OrdenesAdapter extends RecyclerView.Adapter<OrdenesAdapter.ViewHold
     private List<Pedido> listaPedidos;
     private OnPedidoClickListener listener;
     private boolean isRestaurante;
+    private boolean isRepartidor;
 
     public interface OnPedidoClickListener {
         void onRastrearClick(Pedido pedido);
@@ -32,11 +33,19 @@ public class OrdenesAdapter extends RecyclerView.Adapter<OrdenesAdapter.ViewHold
     public OrdenesAdapter(List<Pedido> lista) {
         this.listaPedidos = lista;
         this.isRestaurante = false;
+        this.isRepartidor = false;
     }
     
     public OrdenesAdapter(List<Pedido> lista, boolean isRestaurante) {
         this.listaPedidos = lista;
         this.isRestaurante = isRestaurante;
+        this.isRepartidor = false;
+    }
+    
+    public OrdenesAdapter(List<Pedido> lista, boolean isRestaurante, boolean isRepartidor) {
+        this.listaPedidos = lista;
+        this.isRestaurante = isRestaurante;
+        this.isRepartidor = isRepartidor;
     }
 
     public void setOnPedidoClickListener(OnPedidoClickListener listener) {
