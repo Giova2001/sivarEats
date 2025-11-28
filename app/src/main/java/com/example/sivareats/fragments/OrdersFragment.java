@@ -261,12 +261,13 @@ public class OrdersFragment extends Fragment {
                                         }
                                     }
                                 } else {
-                                    // Lógica para usuarios normales y restaurantes
-                                    if ("activo".equals(estado) || "preparacion".equals(estado)) {
+                                    // Lógica para usuarios normales
+                                    if ("activo".equals(estado) || "preparacion".equals(estado) || "en_camino".equals(estado)) {
                                         if (!pedidosActivosMap.containsKey(pedidoId)) {
                                             pedidosActivosMap.put(pedidoId, pedido);
                                         }
-                                    } else {
+                                    } else if ("entregado".equals(estado) || "completado".equals(estado)) {
+                                        // Pedidos entregados o completados van al historial
                                         if (!pedidosCompletadosMap.containsKey(pedidoId)) {
                                             pedidosCompletadosMap.put(pedidoId, pedido);
                                         }
@@ -376,13 +377,13 @@ public class OrdersFragment extends Fragment {
                                                 String pedidoId = pedido.getId();
                                                 String estado = pedido.getEstado();
                                                 
-                                                if ("preparacion".equals(estado)) {
-                                                    // Agregar a pedidos en preparación
+                                                if ("preparacion".equals(estado) || "entregado_repartidor".equals(estado)) {
+                                                    // Agregar a pedidos en preparación o entregados al repartidor
                                                     if (!pedidosEnPreparacionMap.containsKey(pedidoId)) {
                                                         pedidosEnPreparacionMap.put(pedidoId, pedido);
                                                     }
-                                                } else if ("completado".equals(estado) || "rechazado".equals(estado)) {
-                                                    // Agregar a pedidos completados
+                                                } else if ("completado".equals(estado) || "rechazado".equals(estado) || "entregado".equals(estado)) {
+                                                    // Agregar a pedidos completados (incluye entregado)
                                                     if (!pedidosCompletadosMap.containsKey(pedidoId)) {
                                                         pedidosCompletadosMap.put(pedidoId, pedido);
                                                     }

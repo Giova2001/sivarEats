@@ -422,9 +422,41 @@ public class OrdenesAdapter extends RecyclerView.Adapter<OrdenesAdapter.ViewHold
                     .collection("pedidos_pendientes").document(pedidoId)
                     .update(updates)
                     .addOnSuccessListener(aVoid -> {
-                        Log.d("OrdenesAdapter", "Estado actualizado en restaurante");
-                        pedido.setEstado(nuevoEstado);
-                        Toast.makeText(context, "Estado actualizado: " + obtenerNombreEstadoRepartidor(nuevoEstado), Toast.LENGTH_SHORT).show();
+                        Log.d("OrdenesAdapter", "Estado actualizado en pedidos_pendientes del restaurante");
+                        
+                        // 4. También actualizar en la colección del restaurante (users/{restauranteEmail}/pedidos)
+                        // Primero obtener el email del restaurante
+                        db.collection("users")
+                                .whereEqualTo("name", restauranteName)
+                                .whereEqualTo("rol", "RESTAURANTE")
+                                .limit(1)
+                                .get()
+                                .addOnSuccessListener(queryDocumentSnapshots -> {
+                                    if (!queryDocumentSnapshots.isEmpty()) {
+                                        String restauranteEmail = queryDocumentSnapshots.getDocuments().get(0).getId();
+                                        db.collection("users").document(restauranteEmail)
+                                                .collection("pedidos").document(pedidoId)
+                                                .update(updates)
+                                                .addOnSuccessListener(aVoid2 -> {
+                                                    Log.d("OrdenesAdapter", "Estado actualizado en colección del restaurante");
+                                                    pedido.setEstado(nuevoEstado);
+                                                    Toast.makeText(context, "Estado actualizado: " + obtenerNombreEstadoRepartidor(nuevoEstado), Toast.LENGTH_SHORT).show();
+                                                })
+                                                .addOnFailureListener(e -> {
+                                                    Log.e("OrdenesAdapter", "Error al actualizar en restaurante: " + e.getMessage());
+                                                    pedido.setEstado(nuevoEstado);
+                                                    Toast.makeText(context, "Estado actualizado: " + obtenerNombreEstadoRepartidor(nuevoEstado), Toast.LENGTH_SHORT).show();
+                                                });
+                                    } else {
+                                        pedido.setEstado(nuevoEstado);
+                                        Toast.makeText(context, "Estado actualizado: " + obtenerNombreEstadoRepartidor(nuevoEstado), Toast.LENGTH_SHORT).show();
+                                    }
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.e("OrdenesAdapter", "Error al buscar restaurante: " + e.getMessage());
+                                    pedido.setEstado(nuevoEstado);
+                                    Toast.makeText(context, "Estado actualizado: " + obtenerNombreEstadoRepartidor(nuevoEstado), Toast.LENGTH_SHORT).show();
+                                });
                     })
                     .addOnFailureListener(e -> {
                         Log.e("OrdenesAdapter", "Error al actualizar estado: " + e.getMessage());
@@ -432,6 +464,9 @@ public class OrdenesAdapter extends RecyclerView.Adapter<OrdenesAdapter.ViewHold
                         // Restaurar estado anterior
                         holder.spinnerEstado.setText(obtenerNombreEstadoRepartidor(estadoActual), false);
                     });
+        } else {
+            pedido.setEstado(nuevoEstado);
+            Toast.makeText(context, "Estado actualizado: " + obtenerNombreEstadoRepartidor(nuevoEstado), Toast.LENGTH_SHORT).show();
         }
     }
 }
