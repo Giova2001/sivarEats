@@ -205,8 +205,9 @@ public class LoginActivity extends AppCompatActivity {
                     // Si la validación local es exitosa, autenticar con Firebase Auth
                     authenticateWithFirebase(email, password);
                 } else {
-                    findViewById(R.id.btnLogin).setEnabled(true);
-                    toast("Correo o contraseña inválidos");
+                    // Si no existe en Room, intentar autenticar directamente con Firebase Auth
+                    // Esto permite que usuarios existentes en Firebase puedan iniciar sesión en dispositivos nuevos
+                    authenticateWithFirebase(email, password);
                 }
             });
         });
@@ -232,19 +233,61 @@ public class LoginActivity extends AppCompatActivity {
                             }
                             
                             // Obtener rol del usuario desde Firestore y guardarlo
-                            loadAndSaveUserRole(email);
+                            // Esperar a que se cargue el rol antes de navegar
+                            loadAndSaveUserRoleAndNavigate(email);
                             
                             // Sincronizar con Firestore (3ra forma: colección)
                             syncUserToFirestore(email);
-                            
-                            toast("Inicio de sesión exitoso");
-                            goToMainScreen();
                         }
                     } else {
-                        // Si no existe en Firebase Auth, crearlo
-                        createFirebaseUser(email, password);
+                        // Si no existe en Firebase Auth, intentar crear o mostrar error
+                        String errorMsg = task.getException() != null ? 
+                                task.getException().getMessage() : "Error desconocido";
+                        
+                        // Si el error es que el usuario no existe, intentar crear
+                        if (errorMsg.contains("no user record") || errorMsg.contains("USER_NOT_FOUND")) {
+                            createFirebaseUser(email, password);
+                        } else {
+                            // Si el error es de contraseña incorrecta, verificar si existe en Room
+                            // Si existe en Room pero no en Firebase, permitir login local
+                            tryLoginLocalOnly(email, password, errorMsg);
+                        }
                     }
                 });
+    }
+
+    /**
+     * Intenta hacer login solo con Room (sin internet).
+     */
+    private void tryLoginLocalOnly(String email, String password, String firebaseError) {
+        ioExecutor.execute(() -> {
+            boolean ok = false;
+            try {
+                ok = userDao.validateLogin(email, password);
+            } catch (Exception ignored) {}
+
+            boolean finalOk = ok;
+            runOnUiThread(() -> {
+                if (finalOk) {
+                    // Login local exitoso, guardar datos y continuar
+                    if (checkBox.isChecked()) {
+                        saveLoginData(email);
+                    } else {
+                        SharedPreferences.Editor editor = sharedPreferences.edit();
+                        editor.putString("email", email);
+                        editor.putBoolean("remember", false);
+                        editor.apply();
+                    }
+                    
+                    // Obtener rol desde Room y guardarlo
+                    loadRoleFromRoomAndSaveAndNavigate(email);
+                    
+                    toast("Inicio de sesión exitoso (modo offline)");
+                } else {
+                    toast("Correo o contraseña inválidos");
+                }
+            });
+        });
     }
 
     private void createFirebaseUser(String email, String password) {
@@ -266,13 +309,11 @@ public class LoginActivity extends AppCompatActivity {
                             }
                             
                             // Obtener rol del usuario desde Firestore y guardarlo
-                            loadAndSaveUserRole(email);
+                            // Esperar a que se cargue el rol antes de navegar
+                            loadAndSaveUserRoleAndNavigate(email);
                             
                             // Sincronizar con Firestore (3ra forma: colección)
                             syncUserToFirestore(email);
-                            
-                            toast("Usuario creado y autenticado");
-                            goToMainScreen();
                         }
                     } else {
                         String errorMsg = task.getException() != null ? 
@@ -319,8 +360,8 @@ public class LoginActivity extends AppCompatActivity {
                         userData.put("email", localUser.getEmail());
                         userData.put("alias", localUser.getAlias() != null ? localUser.getAlias() : "");
                         userData.put("telefono", localUser.getTelefono() != null ? localUser.getTelefono() : "");
-                        userData.put("profile_image_url", localUser.getProfileImageUrl() != null ? localUser.getProfileImageUrl() : "");
-                        userData.put("rol", localUser.getRol() != null ? localUser.getRol() : "USUARIO_NORMAL");
+                        //userData.put("profile_image_url", localUser.getProfileImageUrl() != null ? localUser.getProfileImageUrl() : "");
+                        //userData.put("rol", localUser.getRol() != null ? localUser.getRol() : "USUARIO_NORMAL");
                         userData.put("createdAt", FieldValue.serverTimestamp());
                         userData.put("lastLoginAt", FieldValue.serverTimestamp());
 
@@ -362,9 +403,9 @@ public class LoginActivity extends AppCompatActivity {
      * Carga el rol del usuario desde Firestore y lo guarda en SharedPreferences.
      */
     /**
-     * Carga el rol del usuario desde Firestore y lo guarda en SharedPreferences.
+     * Carga el rol del usuario desde Firestore y lo guarda en SharedPreferences, luego navega.
      */
-    private void loadAndSaveUserRole(String email) {
+    private void loadAndSaveUserRoleAndNavigate(String email) {
         firestore.collection("users").document(email)
                 .get()
                 .addOnSuccessListener(documentSnapshot -> {
@@ -377,19 +418,49 @@ public class LoginActivity extends AppCompatActivity {
                             rol = firestoreRol;
                             // Guardar email y rol en SivarEatsPrefs
                             saveUserRoleToPrefs(email, rol);
+                            toast("Inicio de sesión exitoso");
+                            goToMainScreen();
                         } else {
                             // Si no existe en Firestore, intentar obtenerlo desde Room
-                            loadRoleFromRoomAndSave(email);
+                            loadRoleFromRoomAndSaveAndNavigate(email);
                         }
                     } else {
                         // Si no existe en Firestore, intentar obtenerlo desde Room
-                        loadRoleFromRoomAndSave(email);
+                        loadRoleFromRoomAndSaveAndNavigate(email);
                     }
                 })
                 .addOnFailureListener(e -> {
                     // Si falla obtener de Firestore, intentar desde Room
-                    loadRoleFromRoomAndSave(email);
+                    loadRoleFromRoomAndSaveAndNavigate(email);
                 });
+    }
+    
+    /**
+     * Carga el rol desde Room y lo guarda en SharedPreferences, luego navega.
+     */
+    private void loadRoleFromRoomAndSaveAndNavigate(String email) {
+        ioExecutor.execute(() -> {
+            try {
+                User localUser = userDao.findByEmail(email);
+                String rol = "USUARIO_NORMAL";
+                if (localUser != null && localUser.getRol() != null && !localUser.getRol().isEmpty()) {
+                    rol = localUser.getRol();
+                }
+                saveUserRoleToPrefs(email, rol);
+                
+                runOnUiThread(() -> {
+                    toast("Inicio de sesión exitoso");
+                    goToMainScreen();
+                });
+            } catch (Exception ex) {
+                // Error silencioso, usar valor por defecto
+                saveUserRoleToPrefs(email, "USUARIO_NORMAL");
+                runOnUiThread(() -> {
+                    toast("Inicio de sesión exitoso");
+                    goToMainScreen();
+                });
+            }
+        });
     }
     
     /**
@@ -560,7 +631,12 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void goToMainScreen() {
+        // Obtener rol guardado en SharedPreferences
+        SharedPreferences sessionPrefs = getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
+        String userRol = sessionPrefs.getString("CURRENT_USER_ROL", "USUARIO_NORMAL");
+        
         Intent intent = new Intent(LoginActivity.this, NavegacionActivity.class);
+        intent.putExtra("USER_TYPE", userRol);
         startActivity(intent);
         finish();
     }

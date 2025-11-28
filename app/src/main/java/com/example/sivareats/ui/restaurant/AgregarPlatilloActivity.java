@@ -4,14 +4,17 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
+import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
+import android.widget.ScrollView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -48,6 +51,7 @@ public class AgregarPlatilloActivity extends AppCompatActivity {
     private boolean isVisible = true;
     private Uri imagenUri = null;
 
+    private ScrollView scrollView;
     private ImageView imgPlatilloPlaceholder;
     private ImageView imgPlatilloSelected;
     private TextInputEditText etNombre;
@@ -88,6 +92,7 @@ public class AgregarPlatilloActivity extends AppCompatActivity {
         initViews();
         setupCategoriaDropdown();
         setupVisibilitySwitch();
+        setupKeyboardScroll();
         
         // Cargar nombre del restaurante
         loadRestaurantName();
@@ -110,6 +115,7 @@ public class AgregarPlatilloActivity extends AppCompatActivity {
         }
         toolbar.setNavigationOnClickListener(v -> onBackPressed());
 
+        scrollView = findViewById(R.id.scrollView);
         imgPlatilloPlaceholder = findViewById(R.id.img_platillo_placeholder);
         imgPlatilloSelected = findViewById(R.id.img_platillo_selected);
         etNombre = findViewById(R.id.et_nombre);
@@ -118,6 +124,82 @@ public class AgregarPlatilloActivity extends AppCompatActivity {
         etDescripcion = findViewById(R.id.et_descripcion);
         switchVisible = findViewById(R.id.switch_visible);
         btnGuardar = findViewById(R.id.btn_guardar);
+    }
+    
+    private void setupKeyboardScroll() {
+        if (scrollView == null) return;
+        
+        // Listener para detectar cuando aparece/desaparece el teclado
+        scrollView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                Rect r = new Rect();
+                scrollView.getWindowVisibleDisplayFrame(r);
+                int screenHeight = scrollView.getRootView().getHeight();
+                int keypadHeight = screenHeight - r.bottom;
+                
+                // Si el teclado está visible (keypadHeight > screenHeight * 0.15)
+                if (keypadHeight > screenHeight * 0.15) {
+                    // El teclado está visible
+                } else {
+                    // El teclado está oculto
+                }
+            }
+        });
+        
+        // Agregar listeners de foco a los campos de texto
+        View.OnFocusChangeListener focusListener = (v, hasFocus) -> {
+            if (hasFocus) {
+                // Esperar un momento para que el teclado aparezca
+                scrollView.postDelayed(() -> scrollToView(v), 300);
+            }
+        };
+        
+        if (etNombre != null) {
+            etNombre.setOnFocusChangeListener(focusListener);
+        }
+        if (etPrecio != null) {
+            etPrecio.setOnFocusChangeListener(focusListener);
+        }
+        if (acCategoria != null) {
+            acCategoria.setOnFocusChangeListener(focusListener);
+        }
+        if (etDescripcion != null) {
+            etDescripcion.setOnFocusChangeListener(focusListener);
+        }
+    }
+    
+    private void scrollToView(View view) {
+        if (scrollView == null || view == null) return;
+        
+        Rect scrollBounds = new Rect();
+        scrollView.getHitRect(scrollBounds);
+        
+        int[] location = new int[2];
+        view.getLocationInWindow(location);
+        
+        int viewTop = location[1];
+        int viewBottom = viewTop + view.getHeight();
+        
+        // Obtener la posición del ScrollView en la ventana
+        int[] scrollLocation = new int[2];
+        scrollView.getLocationInWindow(scrollLocation);
+        int scrollTop = scrollLocation[1];
+        int scrollBottom = scrollTop + scrollView.getHeight();
+        
+        // Calcular el desplazamiento necesario
+        int scrollY = 0;
+        if (viewTop < scrollTop) {
+            // El campo está arriba del ScrollView visible
+            scrollY = viewTop - scrollTop - 100; // 100dp de margen superior
+        } else if (viewBottom > scrollBottom) {
+            // El campo está abajo del ScrollView visible
+            scrollY = viewBottom - scrollBottom + 100; // 100dp de margen inferior
+        }
+        
+        if (scrollY != 0) {
+            scrollView.smoothScrollBy(0, scrollY);
+        }
     }
 
 
