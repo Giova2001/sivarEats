@@ -21,6 +21,9 @@ import com.example.sivareats.model.CartViewModel;
 import com.example.sivareats.model.Producto;
 import com.example.sivareats.utils.SearchHistoryManager;
 import com.google.android.material.button.MaterialButton;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.bumptech.glide.Glide;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -67,6 +70,9 @@ public class HomeFragment extends Fragment {
     // Listas completas de productos (sin filtrar)
     private List<Producto> todasLasOfertas;
     private List<Producto> todosLosRecomendados;
+    
+    // Firebase
+    private FirebaseFirestore db;
 
     public HomeFragment() {
     }
@@ -104,6 +110,9 @@ public class HomeFragment extends Fragment {
             tvHistorialTitulo = view.findViewById(R.id.tvHistorialTitulo);
 
             searchHistoryManager = new SearchHistoryManager(requireContext());
+            
+            // Inicializar Firebase
+            db = FirebaseFirestore.getInstance();
 
             // Cargar todas las listas de productos PRIMERO
             todasLasOfertas = obtenerTodasLasOfertas();
@@ -113,6 +122,9 @@ public class HomeFragment extends Fragment {
             todosLosProductos = new ArrayList<>();
             todosLosProductos.addAll(todasLasOfertas);
             todosLosProductos.addAll(todosLosRecomendados);
+            
+            // Cargar platillos desde Firestore y agregarlos al menú
+            cargarPlatillosDesdeFirestore(inflater);
 
             // Mostrar overlay al hacer clic en la barra de búsqueda
             barraBusqueda.setOnFocusChangeListener((v, hasFocus) -> {
@@ -171,13 +183,46 @@ public class HomeFragment extends Fragment {
             // Configurar manejo del botón atrás para cerrar el overlay
             configurarManejoBotonAtras();
 
-            return view;
-
         } catch (Exception e) {
             Log.e(TAG, "Error en onCreateView: ", e);
             Toast.makeText(getContext(), "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
-            return view;
         }
+
+        return view;
+    }
+    
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Recargar platillos cuando el fragment se vuelve visible
+        // Esto asegura que los nuevos platillos agregados se muestren
+        // Solo recargar si el fragment está visible y hay un LayoutInflater disponible
+        if (db != null && isAdded() && getView() != null) {
+            LayoutInflater inflater = LayoutInflater.from(requireContext());
+            // Limpiar platillos de Firestore antes de recargar para evitar duplicados
+            limpiarPlatillosFirestore();
+            cargarPlatillosDesdeFirestore(inflater);
+        }
+    }
+    
+    /**
+     * Limpia los platillos que fueron cargados desde Firestore de las listas.
+     * Esto evita duplicados al recargar.
+     */
+    private void limpiarPlatillosFirestore() {
+        // Identificar platillos de Firestore por tener imagenUrl o restaurante no estándar
+        // Por ahora, simplemente recargamos todo desde cero
+        // Una mejor solución sería mantener una lista separada de platillos de Firestore
+        // Por simplicidad, recargamos los productos estáticos y luego agregamos los de Firestore
+        todasLasOfertas.clear();
+        todosLosRecomendados.clear();
+        todosLosProductos.clear();
+        
+        // Recargar productos estáticos
+        todasLasOfertas.addAll(obtenerTodasLasOfertas());
+        todosLosRecomendados.addAll(obtenerTodosLosRecomendados());
+        todosLosProductos.addAll(todasLasOfertas);
+        todosLosProductos.addAll(todosLosRecomendados);
     }
 
 
@@ -758,7 +803,7 @@ public class HomeFragment extends Fragment {
         todosLosProductos.addAll(todasLasOfertas);
         todosLosProductos.addAll(todosLosRecomendados);
 
-        // Agrupar por restaurante
+        // Agrupar por restaurante (solo restaurantes con al menos un platillo visible)
         java.util.Map<String, List<Producto>> restaurantesMap = new java.util.HashMap<>();
         for (Producto producto : todosLosProductos) {
             String restaurante = producto.getRestaurante();
@@ -770,12 +815,45 @@ public class HomeFragment extends Fragment {
             }
         }
 
-        // Orden de restaurantes específico
-        String[] ordenRestaurantes = {"Pollo Campero", "Pizza Hut", "China Wok", "Burger King"};
+        // Obtener todos los nombres de restaurantes únicos (incluyendo los de Firestore)
+        java.util.Set<String> todosLosRestaurantes = new java.util.HashSet<>();
+        todosLosRestaurantes.addAll(restaurantesMap.keySet());
+        
+        // Agregar restaurantes estáticos conocidos al conjunto
+        String[] restaurantesEstaticos = {"Pollo Campero", "Pizza Hut", "China Wok", "Burger King"};
+        for (String restaurante : restaurantesEstaticos) {
+            if (restaurantesMap.containsKey(restaurante)) {
+                todosLosRestaurantes.add(restaurante);
+            }
+        }
 
-        // Crear sección para cada restaurante en el orden especificado
+        // Orden de restaurantes específico (solo los que tienen productos)
+        String[] ordenRestaurantes = {"Pollo Campero", "Pizza Hut", "China Wok", "Burger King"};
+        
+        // Primero mostrar restaurantes en el orden especificado
         for (String nombreRestaurante : ordenRestaurantes) {
             if (restaurantesMap.containsKey(nombreRestaurante)) {
+                List<Producto> productosRestaurante = restaurantesMap.get(nombreRestaurante);
+                if (productosRestaurante != null && !productosRestaurante.isEmpty()) {
+                    // Crear contenedor para el restaurante
+                    View restauranteSection = crearSeccionRestaurante(nombreRestaurante, productosRestaurante, inflater);
+                    layoutRestaurantesAgrupados.addView(restauranteSection);
+                }
+            }
+        }
+        
+        // Luego mostrar restaurantes de Firestore que no están en el orden estático
+        for (String nombreRestaurante : todosLosRestaurantes) {
+            // Solo agregar si no está en el orden estático
+            boolean yaAgregado = false;
+            for (String restauranteEstatico : ordenRestaurantes) {
+                if (nombreRestaurante.equals(restauranteEstatico)) {
+                    yaAgregado = true;
+                    break;
+                }
+            }
+            
+            if (!yaAgregado && restaurantesMap.containsKey(nombreRestaurante)) {
                 List<Producto> productosRestaurante = restaurantesMap.get(nombreRestaurante);
                 if (productosRestaurante != null && !productosRestaurante.isEmpty()) {
                     // Crear contenedor para el restaurante
@@ -800,7 +878,7 @@ public class HomeFragment extends Fragment {
         tituloRestaurante.setText(nombreRestaurante);
         tituloRestaurante.setTextSize(22);
         tituloRestaurante.setTypeface(null, android.graphics.Typeface.BOLD);
-        tituloRestaurante.setTextColor(0xFF000000);
+        tituloRestaurante.setTextColor(0xFFFFFFFF); // Color blanco
         tituloRestaurante.setPadding(8, 16, 8, 12);
         contenedorRestaurante.addView(tituloRestaurante);
 
@@ -964,8 +1042,18 @@ public class HomeFragment extends Fragment {
                 TextView precio = itemView.findViewById(R.id.tvPrecioProductoOferta);
                 View btnAgregar = itemView.findViewById(R.id.btnAgregarCarrito);
 
-                // Asignar imagen del producto
-                imgProducto.setImageResource(p.getImagenResId());
+                // Asignar imagen del producto (desde URL o resource ID)
+                if (p.getImagenUrl() != null && !p.getImagenUrl().isEmpty()) {
+                    // Cargar imagen desde URL usando Glide
+                    Glide.with(requireContext())
+                            .load(p.getImagenUrl())
+                            .placeholder(R.drawable.campero1) // Imagen por defecto mientras carga
+                            .error(R.drawable.campero1) // Imagen de error si falla
+                            .into(imgProducto);
+                } else {
+                    // Usar resource ID
+                    imgProducto.setImageResource(p.getImagenResId());
+                }
 
                 nombre.setText(p.getNombre());
                 descripcion.setText(p.getDescripcion());
@@ -997,5 +1085,123 @@ public class HomeFragment extends Fragment {
                 Log.e(TAG, "Error al agregar producto " + p.getNombre(), e);
             }
         }
+    }
+    
+    /**
+     * Carga los platillos desde Firestore y los agrega al menú principal.
+     */
+    private void cargarPlatillosDesdeFirestore(LayoutInflater inflater) {
+        if (db == null) {
+            Log.e(TAG, "FirebaseFirestore no inicializado");
+            return;
+        }
+        
+        db.collection("restaurantes")
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    List<Producto> platillosFirestore = new ArrayList<>();
+                    int totalRestaurantes = queryDocumentSnapshots.size();
+                    final int[] restaurantesProcesados = {0};
+                    
+                    if (totalRestaurantes == 0) {
+                        Log.d(TAG, "No hay restaurantes en Firestore");
+                        return;
+                    }
+                    
+                    for (QueryDocumentSnapshot restauranteDoc : queryDocumentSnapshots) {
+                        String nombreRestaurante = restauranteDoc.getId();
+                        
+                        // Obtener platillos de este restaurante
+                        restauranteDoc.getReference()
+                                .collection("platillos")
+                                .whereEqualTo("visible", true) // Solo platillos visibles
+                                .get()
+                                .addOnSuccessListener(platillosSnapshot -> {
+                                    for (QueryDocumentSnapshot platilloDoc : platillosSnapshot) {
+                                        try {
+                                            String nombrePlatillo = platilloDoc.getString("nombrePlatillo");
+                                            String descripcion = platilloDoc.getString("Descripcion");
+                                            String categoria = platilloDoc.getString("categoria");
+                                            String imagenUrl = platilloDoc.getString("URL_imagen_platillo");
+                                            Double precio = platilloDoc.getDouble("precio");
+                                            
+                                            if (nombrePlatillo != null && precio != null) {
+                                                // Crear Producto desde Firestore con URL de imagen
+                                                Producto producto;
+                                                if (imagenUrl != null && !imagenUrl.isEmpty()) {
+                                                    // Usar constructor con URL de imagen
+                                                    producto = new Producto(
+                                                            nombrePlatillo,
+                                                            descripcion != null ? descripcion : "",
+                                                            imagenUrl,
+                                                            precio,
+                                                            0,
+                                                            categoria != null ? categoria.toLowerCase() : "restaurantes",
+                                                            nombreRestaurante
+                                                    );
+                                                } else {
+                                                    // Usar constructor con resource ID por defecto
+                                                    producto = new Producto(
+                                                            nombrePlatillo,
+                                                            descripcion != null ? descripcion : "",
+                                                            R.drawable.campero1,
+                                                            precio,
+                                                            0,
+                                                            categoria != null ? categoria.toLowerCase() : "restaurantes",
+                                                            nombreRestaurante
+                                                    );
+                                                }
+                                                
+                                                platillosFirestore.add(producto);
+                                                
+                                                // Agregar a las listas principales
+                                                todasLasOfertas.add(producto);
+                                                todosLosRecomendados.add(producto);
+                                                todosLosProductos.add(producto);
+                                            }
+                                        } catch (Exception e) {
+                                            Log.e(TAG, "Error al procesar platillo: " + e.getMessage());
+                                        }
+                                    }
+                                    
+                                    // Incrementar contador de restaurantes procesados
+                                    restaurantesProcesados[0]++;
+                                    
+                                    // Si todos los restaurantes han sido procesados, actualizar la UI
+                                    if (restaurantesProcesados[0] >= totalRestaurantes) {
+                                        if (getActivity() != null && isAdded()) {
+                                            getActivity().runOnUiThread(() -> {
+                                                actualizarProductos(inflater);
+                                                mostrarRestaurantes(inflater);
+                                                if (categoriaSeleccionada.equals("restaurantes")) {
+                                                    mostrarRestaurantesAgrupados(inflater);
+                                                }
+                                                Log.d(TAG, "Platillos cargados desde Firestore: " + platillosFirestore.size());
+                                            });
+                                        }
+                                    }
+                                })
+                                .addOnFailureListener(e -> {
+                                    Log.e(TAG, "Error al cargar platillos del restaurante " + nombreRestaurante + ": " + e.getMessage());
+                                    restaurantesProcesados[0]++;
+                                    
+                                    // Si todos los restaurantes han sido procesados (incluso con errores), actualizar UI
+                                    if (restaurantesProcesados[0] >= totalRestaurantes) {
+                                        if (getActivity() != null && isAdded()) {
+                                            getActivity().runOnUiThread(() -> {
+                                                actualizarProductos(inflater);
+                                                mostrarRestaurantes(inflater);
+                                                if (categoriaSeleccionada.equals("restaurantes")) {
+                                                    mostrarRestaurantesAgrupados(inflater);
+                                                }
+                                            });
+                                        }
+                                    }
+                                });
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error al cargar restaurantes: " + e.getMessage());
+                });
     }
 }
