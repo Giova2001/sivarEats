@@ -173,6 +173,9 @@ public class HomeFragment extends Fragment {
 
             // Configurar listeners de botones de categorías
             setupCategoriaButtons(inflater);
+            
+            // Configurar listener del botón Todo
+            setupBotonTodo(inflater);
 
             // Mostrar productos iniciales (todos)
             actualizarProductos(inflater);
@@ -664,6 +667,48 @@ public class HomeFragment extends Fragment {
         btnPizza.setOnClickListener(v -> {
             seleccionarCategoria("pizza", inflater);
         });
+    }
+    
+    private void setupBotonTodo(LayoutInflater inflater) {
+        btnTodo.setOnClickListener(v -> {
+            // Alternar visibilidad del layoutTodo
+            if (layoutTodo.getVisibility() == View.VISIBLE) {
+                layoutTodo.setVisibility(View.GONE);
+            } else {
+                layoutTodo.setVisibility(View.VISIBLE);
+                // Cargar todos los platillos (estáticos y de Firebase) usando la misma tarjeta
+                mostrarTodosLosPlatillos(inflater);
+            }
+        });
+    }
+    
+    /**
+     * Muestra todos los platillos (estáticos y de Firebase) en el layoutTodo usando la misma tarjeta item_oferta.
+     */
+    private void mostrarTodosLosPlatillos(LayoutInflater inflater) {
+        layoutTodo.removeAllViews();
+        
+        // Obtener todos los productos (estáticos y de Firebase)
+        List<Producto> todosLosProductos = new ArrayList<>();
+        todosLosProductos.addAll(todasLasOfertas);
+        todosLosProductos.addAll(todosLosRecomendados);
+        
+        // Crear un contenedor horizontal scrollable para los platillos
+        HorizontalScrollView scrollView = new HorizontalScrollView(getContext());
+        scrollView.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+        scrollView.setHorizontalScrollBarEnabled(false);
+        
+        LinearLayout layoutProductos = new LinearLayout(getContext());
+        layoutProductos.setOrientation(LinearLayout.HORIZONTAL);
+        layoutProductos.setPadding(4, 0, 4, 0);
+        
+        // Agregar todos los productos usando la misma tarjeta item_oferta
+        agregarProductos(layoutProductos, todosLosProductos, inflater);
+        
+        scrollView.addView(layoutProductos);
+        layoutTodo.addView(scrollView);
     }
 
     private void seleccionarCategoria(String categoria, LayoutInflater inflater) {
