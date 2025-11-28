@@ -230,9 +230,9 @@ public class LoginActivity extends AppCompatActivity {
                                 editor.putBoolean("remember", false);
                                 editor.apply();
                             }
-                            // También guardar en SivarEatsPrefs para uso en otras actividades
-                            SharedPreferences sessionPrefs = getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
-                            sessionPrefs.edit().putString("CURRENT_USER_EMAIL", email).apply();
+                            
+                            // Obtener rol del usuario desde Firestore y guardarlo
+                            loadAndSaveUserRole(email);
                             
                             // Sincronizar con Firestore (3ra forma: colección)
                             syncUserToFirestore(email);
@@ -264,9 +264,9 @@ public class LoginActivity extends AppCompatActivity {
                                 editor.putBoolean("remember", false);
                                 editor.apply();
                             }
-                            // También guardar en SivarEatsPrefs para uso en otras actividades
-                            SharedPreferences sessionPrefs = getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
-                            sessionPrefs.edit().putString("CURRENT_USER_EMAIL", email).apply();
+                            
+                            // Obtener rol del usuario desde Firestore y guardarlo
+                            loadAndSaveUserRole(email);
                             
                             // Sincronizar con Firestore (3ra forma: colección)
                             syncUserToFirestore(email);
@@ -358,6 +358,70 @@ public class LoginActivity extends AppCompatActivity {
      * Sincroniza el usuario con Firestore (colección "users").
      * Obtiene los datos desde Room y los guarda/actualiza en Firestore.
      */
+    /**
+     * Carga el rol del usuario desde Firestore y lo guarda en SharedPreferences.
+     */
+    /**
+     * Carga el rol del usuario desde Firestore y lo guarda en SharedPreferences.
+     */
+    private void loadAndSaveUserRole(String email) {
+        firestore.collection("users").document(email)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    String rol = "USUARIO_NORMAL"; // Valor por defecto
+                    
+                    if (documentSnapshot.exists()) {
+                        // Obtener rol desde Firestore
+                        String firestoreRol = documentSnapshot.getString("rol");
+                        if (firestoreRol != null && !firestoreRol.isEmpty()) {
+                            rol = firestoreRol;
+                            // Guardar email y rol en SivarEatsPrefs
+                            saveUserRoleToPrefs(email, rol);
+                        } else {
+                            // Si no existe en Firestore, intentar obtenerlo desde Room
+                            loadRoleFromRoomAndSave(email);
+                        }
+                    } else {
+                        // Si no existe en Firestore, intentar obtenerlo desde Room
+                        loadRoleFromRoomAndSave(email);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    // Si falla obtener de Firestore, intentar desde Room
+                    loadRoleFromRoomAndSave(email);
+                });
+    }
+    
+    /**
+     * Carga el rol desde Room y lo guarda en SharedPreferences.
+     */
+    private void loadRoleFromRoomAndSave(String email) {
+        ioExecutor.execute(() -> {
+            try {
+                User localUser = userDao.findByEmail(email);
+                String rol = "USUARIO_NORMAL";
+                if (localUser != null && localUser.getRol() != null && !localUser.getRol().isEmpty()) {
+                    rol = localUser.getRol();
+                }
+                saveUserRoleToPrefs(email, rol);
+            } catch (Exception ex) {
+                // Error silencioso, usar valor por defecto
+                saveUserRoleToPrefs(email, "USUARIO_NORMAL");
+            }
+        });
+    }
+    
+    /**
+     * Guarda el email y rol del usuario en SharedPreferences.
+     */
+    private void saveUserRoleToPrefs(String email, String rol) {
+        SharedPreferences sessionPrefs = getSharedPreferences("SivarEatsPrefs", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sessionPrefs.edit();
+        editor.putString("CURRENT_USER_EMAIL", email);
+        editor.putString("CURRENT_USER_ROL", rol);
+        editor.apply();
+    }
+
     private void syncUserToFirestore(String email) {
         if (firestore == null) {
             return;
