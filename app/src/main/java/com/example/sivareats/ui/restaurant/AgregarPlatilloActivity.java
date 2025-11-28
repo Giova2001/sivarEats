@@ -29,6 +29,7 @@ import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.SetOptions;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -305,29 +306,45 @@ public class AgregarPlatilloActivity extends AppCompatActivity {
     }
 
     private void loadPlatilloDataFromFirebase() {
+        // Cargar desde el documento del restaurante directamente
         db.collection("restaurantes").document(restaurantName)
-                .collection("platillos").document(platilloId)
                 .get()
                 .addOnSuccessListener(documentSnapshot -> {
-                    if (documentSnapshot.exists()) {
-                        etNombre.setText(documentSnapshot.getString("nombrePlatillo"));
-                        Double precio = documentSnapshot.getDouble("precio");
-                        if (precio != null) {
-                            etPrecio.setText(String.valueOf(precio));
-                        }
-                        acCategoria.setText(documentSnapshot.getString("categoria"), false);
-                        etDescripcion.setText(documentSnapshot.getString("Descripcion"));
-                        Boolean visible = documentSnapshot.getBoolean("visible");
-                        isVisible = visible != null ? visible : true;
-                        switchVisible.setChecked(isVisible);
-
-                        String imagenUrl = documentSnapshot.getString("URL_imagen_platillo");
-                        if (imagenUrl != null && !imagenUrl.isEmpty()) {
-                            imgPlatilloPlaceholder.setVisibility(View.GONE);
-                            imgPlatilloSelected.setVisibility(View.VISIBLE);
-                            Glide.with(this)
-                                    .load(imagenUrl)
-                                    .into(imgPlatilloSelected);
+                    if (documentSnapshot.exists() && platilloId != null) {
+                        // Los platillos están guardados como campos del documento
+                        // Cada platillo es un mapa con el ID como clave
+                        Map<String, Object> platilloData = (Map<String, Object>) documentSnapshot.get(platilloId);
+                        if (platilloData != null) {
+                            String nombre = (String) platilloData.get("nombrePlatillo");
+                            Double precio = (Double) platilloData.get("precio");
+                            String categoria = (String) platilloData.get("categoria");
+                            String descripcion = (String) platilloData.get("Descripcion");
+                            Boolean visible = (Boolean) platilloData.get("visible");
+                            String imagenUrl = (String) platilloData.get("URL_imagen_platillo");
+                            
+                            if (nombre != null) {
+                                etNombre.setText(nombre);
+                            }
+                            if (precio != null) {
+                                etPrecio.setText(String.valueOf(precio));
+                            }
+                            if (categoria != null) {
+                                acCategoria.setText(categoria, false);
+                            }
+                            if (descripcion != null) {
+                                etDescripcion.setText(descripcion);
+                            }
+                            if (visible != null) {
+                                isVisible = visible;
+                                switchVisible.setChecked(isVisible);
+                            }
+                            if (imagenUrl != null && !imagenUrl.isEmpty()) {
+                                imgPlatilloPlaceholder.setVisibility(View.GONE);
+                                imgPlatilloSelected.setVisibility(View.VISIBLE);
+                                Glide.with(this)
+                                        .load(imagenUrl)
+                                        .into(imgPlatilloSelected);
+                            }
                         }
                     }
                 })
@@ -500,40 +517,34 @@ public class AgregarPlatilloActivity extends AppCompatActivity {
             platilloData.put("URL_imagen_platillo", imagenUrl);
         }
 
+        // Guardar platillo directamente en el documento del restaurante
+        // Usar merge para no sobrescribir otros platillos
+        Map<String, Object> updateData = new HashMap<>();
+        
         if (isEditing && platilloId != null) {
             // Actualizar platillo existente
-            db.collection("restaurantes").document(restaurantName)
-                    .collection("platillos").document(platilloId)
-                    .update(platilloData)
-                    .addOnSuccessListener(aVoid -> {
-                        Toast.makeText(this, "Platillo actualizado correctamente", Toast.LENGTH_SHORT).show();
-                        setResult(RESULT_OK);
-                        finish();
-                    })
-                    .addOnFailureListener(e -> {
-                        Log.e("AgregarPlatillo", "Error al actualizar: " + e.getMessage());
-                        Toast.makeText(this, "Error al actualizar platillo", Toast.LENGTH_SHORT).show();
-                        btnGuardar.setEnabled(true);
-                        btnGuardar.setText("Guardar");
-                    });
+            updateData.put(platilloId, platilloData);
         } else {
             // Crear nuevo platillo
             String newPlatilloId = UUID.randomUUID().toString();
-            db.collection("restaurantes").document(restaurantName)
-                    .collection("platillos").document(newPlatilloId)
-                    .set(platilloData)
-                    .addOnSuccessListener(aVoid -> {
-                        Toast.makeText(this, "Platillo guardado correctamente", Toast.LENGTH_SHORT).show();
-                        setResult(RESULT_OK);
-                        finish();
-                    })
-                    .addOnFailureListener(e -> {
-                        Log.e("AgregarPlatillo", "Error al guardar: " + e.getMessage());
-                        Toast.makeText(this, "Error al guardar platillo", Toast.LENGTH_SHORT).show();
-                        btnGuardar.setEnabled(true);
-                        btnGuardar.setText("Guardar");
-                    });
+            updateData.put(newPlatilloId, platilloData);
         }
+        
+        db.collection("restaurantes").document(restaurantName)
+                .set(updateData, SetOptions.merge())
+                .addOnSuccessListener(aVoid -> {
+                    String message = isEditing ? "Platillo actualizado correctamente" : "Platillo guardado correctamente";
+                    Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+                    setResult(RESULT_OK);
+                    finish();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("AgregarPlatillo", "Error al guardar: " + e.getMessage());
+                    String message = isEditing ? "Error al actualizar platillo" : "Error al guardar platillo";
+                    Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+                    btnGuardar.setEnabled(true);
+                    btnGuardar.setText("Guardar");
+                });
     }
 }
 

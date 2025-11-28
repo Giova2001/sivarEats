@@ -26,6 +26,7 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -135,36 +136,53 @@ public class RestaurantDetailActivity extends AppCompatActivity {
     }
     
     private void loadPlatillos() {
+        // Cargar platillos directamente del documento del restaurante
         db.collection("restaurantes").document(restaurantName)
-                .collection("platillos")
-                .whereEqualTo("visible", true)
                 .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
+                .addOnSuccessListener(documentSnapshot -> {
                     platillosList.clear();
                     
-                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
-                        try {
-                            String nombrePlatillo = doc.getString("nombrePlatillo");
-                            String descripcion = doc.getString("Descripcion");
-                            String categoria = doc.getString("categoria");
-                            String imagenUrl = doc.getString("URL_imagen_platillo");
-                            Double precio = doc.getDouble("precio");
-                            
-                            if (nombrePlatillo != null && precio != null) {
-                                PlatilloItem platillo = new PlatilloItem(
-                                        doc.getId(),
-                                        nombrePlatillo,
-                                        descripcion != null ? descripcion : "",
-                                        categoria != null ? categoria : "restaurantes",
-                                        imagenUrl != null ? imagenUrl : "",
-                                        precio,
-                                        4.5, // Rating por defecto
-                                        0 // Compras por defecto
-                                );
-                                platillosList.add(platillo);
+                    if (documentSnapshot.exists()) {
+                        Map<String, Object> data = documentSnapshot.getData();
+                        if (data != null) {
+                            for (Map.Entry<String, Object> entry : data.entrySet()) {
+                                // Verificar si es un platillo (tiene la estructura esperada)
+                                Object value = entry.getValue();
+                                if (value instanceof Map) {
+                                    @SuppressWarnings("unchecked")
+                                    Map<String, Object> platilloData = (Map<String, Object>) value;
+                                    // Verificar que tenga los campos de un platillo y que sea visible
+                                    if (platilloData.containsKey("nombrePlatillo")) {
+                                        Boolean visible = (Boolean) platilloData.get("visible");
+                                        if (visible == null || visible) { // Solo mostrar platillos visibles
+                                            try {
+                                                String platilloId = entry.getKey();
+                                                String nombrePlatillo = (String) platilloData.get("nombrePlatillo");
+                                                String descripcion = (String) platilloData.get("Descripcion");
+                                                String categoria = (String) platilloData.get("categoria");
+                                                String imagenUrl = (String) platilloData.get("URL_imagen_platillo");
+                                                Double precio = (Double) platilloData.get("precio");
+                                                
+                                                if (nombrePlatillo != null && precio != null) {
+                                                    PlatilloItem platillo = new PlatilloItem(
+                                                            platilloId,
+                                                            nombrePlatillo,
+                                                            descripcion != null ? descripcion : "",
+                                                            categoria != null ? categoria : "restaurantes",
+                                                            imagenUrl != null ? imagenUrl : "",
+                                                            precio,
+                                                            4.5, // Rating por defecto
+                                                            0 // Compras por defecto
+                                                    );
+                                                    platillosList.add(platillo);
+                                                }
+                                            } catch (Exception e) {
+                                                Log.e(TAG, "Error al procesar platillo: " + e.getMessage());
+                                            }
+                                        }
+                                    }
+                                }
                             }
-                        } catch (Exception e) {
-                            Log.e(TAG, "Error al procesar platillo: " + e.getMessage());
                         }
                     }
                     

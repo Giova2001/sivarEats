@@ -21,6 +21,7 @@ import com.bumptech.glide.Glide;
 import com.example.sivareats.R;
 import com.example.sivareats.ui.restaurant.AgregarPlatilloActivity;
 import com.google.firebase.firestore.FirebaseFirestore;
+import java.util.Map;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
@@ -137,24 +138,43 @@ public class EditPlatilloFragment extends Fragment {
     }
 
     private void loadPlatillosFromFirebase() {
+        // Cargar platillos directamente del documento del restaurante
         db.collection("restaurantes").document(restaurantName)
-                .collection("platillos")
                 .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    if (isAdded()) {
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (isAdded() && documentSnapshot.exists()) {
                         platillosList.clear();
-                        for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
-                            Double precio = document.getDouble("precio");
-                            Platillo platillo = new Platillo(
-                                    document.getId(),
-                                    document.getString("nombrePlatillo"),
-                                    document.getString("Descripcion"),
-                                    precio != null ? precio : 0.0,
-                                    document.getString("categoria"),
-                                    document.getString("URL_imagen_platillo"),
-                                    document.getBoolean("visible") != null ? document.getBoolean("visible") : true
-                            );
-                            platillosList.add(platillo);
+                        Map<String, Object> data = documentSnapshot.getData();
+                        if (data != null) {
+                            for (Map.Entry<String, Object> entry : data.entrySet()) {
+                                // Verificar si es un platillo (tiene la estructura esperada)
+                                Object value = entry.getValue();
+                                if (value instanceof Map) {
+                                    @SuppressWarnings("unchecked")
+                                    Map<String, Object> platilloData = (Map<String, Object>) value;
+                                    // Verificar que tenga los campos de un platillo
+                                    if (platilloData.containsKey("nombrePlatillo")) {
+                                        String platilloId = entry.getKey();
+                                        String nombrePlatillo = (String) platilloData.get("nombrePlatillo");
+                                        String descripcion = (String) platilloData.get("Descripcion");
+                                        Double precio = (Double) platilloData.get("precio");
+                                        String categoria = (String) platilloData.get("categoria");
+                                        String imagenUrl = (String) platilloData.get("URL_imagen_platillo");
+                                        Boolean visible = (Boolean) platilloData.get("visible");
+                                        
+                                        Platillo platillo = new Platillo(
+                                                platilloId,
+                                                nombrePlatillo != null ? nombrePlatillo : "",
+                                                descripcion != null ? descripcion : "",
+                                                precio != null ? precio : 0.0,
+                                                categoria != null ? categoria : "",
+                                                imagenUrl != null ? imagenUrl : "",
+                                                visible != null ? visible : true
+                                        );
+                                        platillosList.add(platillo);
+                                    }
+                                }
+                            }
                         }
                         adapter.notifyDataSetChanged();
                     }

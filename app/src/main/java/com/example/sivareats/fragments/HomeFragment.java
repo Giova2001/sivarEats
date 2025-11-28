@@ -30,6 +30,7 @@ import com.bumptech.glide.Glide;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class HomeFragment extends Fragment {
 
@@ -1178,97 +1179,89 @@ public class HomeFragment extends Fragment {
                     for (QueryDocumentSnapshot restauranteDoc : queryDocumentSnapshots) {
                         String nombreRestaurante = restauranteDoc.getId();
                         
-                        // Obtener platillos de este restaurante
-                        restauranteDoc.getReference()
-                                .collection("platillos")
-                                .whereEqualTo("visible", true) // Solo platillos visibles
-                                .get()
-                                .addOnSuccessListener(platillosSnapshot -> {
-                                    for (QueryDocumentSnapshot platilloDoc : platillosSnapshot) {
-                                        try {
-                                            String nombrePlatillo = platilloDoc.getString("nombrePlatillo");
-                                            String descripcion = platilloDoc.getString("Descripcion");
-                                            String categoria = platilloDoc.getString("categoria");
-                                            String imagenUrl = platilloDoc.getString("URL_imagen_platillo");
-                                            Double precio = platilloDoc.getDouble("precio");
-                                            
-                                            if (nombrePlatillo != null && precio != null) {
-                                                // Crear Producto desde Firestore con URL de imagen
-                                                Producto producto;
-                                                if (imagenUrl != null && !imagenUrl.isEmpty()) {
-                                                    // Usar constructor con URL de imagen
-                                                    producto = new Producto(
-                                                            nombrePlatillo,
-                                                            descripcion != null ? descripcion : "",
-                                                            imagenUrl,
-                                                            precio,
-                                                            0,
-                                                            categoria != null ? categoria.toLowerCase() : "restaurantes",
-                                                            nombreRestaurante
-                                                    );
-                                                } else {
-                                                    // Usar constructor con resource ID por defecto
-                                                    producto = new Producto(
-                                                            nombrePlatillo,
-                                                            descripcion != null ? descripcion : "",
-                                                            R.drawable.campero1,
-                                                            precio,
-                                                            0,
-                                                            categoria != null ? categoria.toLowerCase() : "restaurantes",
-                                                            nombreRestaurante
-                                                    );
+                        // Obtener platillos directamente del documento del restaurante
+                        Map<String, Object> data = restauranteDoc.getData();
+                        if (data != null) {
+                            for (Map.Entry<String, Object> entry : data.entrySet()) {
+                                // Verificar si es un platillo (tiene la estructura esperada)
+                                Object value = entry.getValue();
+                                if (value instanceof Map) {
+                                    @SuppressWarnings("unchecked")
+                                    Map<String, Object> platilloData = (Map<String, Object>) value;
+                                    // Verificar que tenga los campos de un platillo y que sea visible
+                                    if (platilloData.containsKey("nombrePlatillo")) {
+                                        Boolean visible = (Boolean) platilloData.get("visible");
+                                        if (visible == null || visible) { // Solo mostrar platillos visibles
+                                            try {
+                                                String nombrePlatillo = (String) platilloData.get("nombrePlatillo");
+                                                String descripcion = (String) platilloData.get("Descripcion");
+                                                String categoria = (String) platilloData.get("categoria");
+                                                String imagenUrl = (String) platilloData.get("URL_imagen_platillo");
+                                                Double precio = (Double) platilloData.get("precio");
+                                                
+                                                if (nombrePlatillo != null && precio != null) {
+                                                    // Crear Producto desde Firestore con URL de imagen
+                                                    Producto producto;
+                                                    if (imagenUrl != null && !imagenUrl.isEmpty()) {
+                                                        // Usar constructor con URL de imagen
+                                                        producto = new Producto(
+                                                                nombrePlatillo,
+                                                                descripcion != null ? descripcion : "",
+                                                                imagenUrl,
+                                                                precio,
+                                                                0,
+                                                                categoria != null ? categoria.toLowerCase() : "restaurantes",
+                                                                nombreRestaurante
+                                                        );
+                                                    } else {
+                                                        // Usar constructor con resource ID por defecto
+                                                        producto = new Producto(
+                                                                nombrePlatillo,
+                                                                descripcion != null ? descripcion : "",
+                                                                R.drawable.campero1,
+                                                                precio,
+                                                                0,
+                                                                categoria != null ? categoria.toLowerCase() : "restaurantes",
+                                                                nombreRestaurante
+                                                        );
+                                                    }
+                                                    
+                                                    platillosFirestore.add(producto);
+                                                    
+                                                    // Agregar a las listas principales
+                                                    todasLasOfertas.add(producto);
+                                                    todosLosRecomendados.add(producto);
+                                                    todosLosProductos.add(producto);
                                                 }
-                                                
-                                                platillosFirestore.add(producto);
-                                                
-                                                // Agregar a las listas principales
-                                                todasLasOfertas.add(producto);
-                                                todosLosRecomendados.add(producto);
-                                                todosLosProductos.add(producto);
+                                            } catch (Exception e) {
+                                                Log.e(TAG, "Error al procesar platillo: " + e.getMessage());
                                             }
-                                        } catch (Exception e) {
-                                            Log.e(TAG, "Error al procesar platillo: " + e.getMessage());
                                         }
                                     }
-                                    
-                                    // Incrementar contador de restaurantes procesados
-                                    restaurantesProcesados[0]++;
-                                    
-                                    // Si todos los restaurantes han sido procesados, actualizar la UI
-                                    if (restaurantesProcesados[0] >= totalRestaurantes) {
-                                        if (getActivity() != null && isAdded()) {
-                                            getActivity().runOnUiThread(() -> {
-                                                actualizarProductos(inflater);
-                                                mostrarRestaurantes(inflater);
-                                                if (categoriaSeleccionada.equals("restaurantes")) {
-                                                    mostrarRestaurantesAgrupados(inflater);
-                                                }
-                                                Log.d(TAG, "Platillos cargados desde Firestore: " + platillosFirestore.size());
-                                            });
-                                        }
+                                }
+                            }
+                        }
+                        
+                        // Incrementar contador de restaurantes procesados
+                        restaurantesProcesados[0]++;
+                        
+                        // Si todos los restaurantes han sido procesados, actualizar la UI
+                        if (restaurantesProcesados[0] >= totalRestaurantes) {
+                            if (getActivity() != null && isAdded()) {
+                                getActivity().runOnUiThread(() -> {
+                                    actualizarProductos(inflater);
+                                    mostrarRestaurantes(inflater);
+                                    if (categoriaSeleccionada.equals("restaurantes")) {
+                                        mostrarRestaurantesAgrupados(inflater);
                                     }
-                                })
-                                .addOnFailureListener(e -> {
-                                    Log.e(TAG, "Error al cargar platillos del restaurante " + nombreRestaurante + ": " + e.getMessage());
-                                    restaurantesProcesados[0]++;
-                                    
-                                    // Si todos los restaurantes han sido procesados (incluso con errores), actualizar UI
-                                    if (restaurantesProcesados[0] >= totalRestaurantes) {
-                                        if (getActivity() != null && isAdded()) {
-                                            getActivity().runOnUiThread(() -> {
-                                                actualizarProductos(inflater);
-                                                mostrarRestaurantes(inflater);
-                                                if (categoriaSeleccionada.equals("restaurantes")) {
-                                                    mostrarRestaurantesAgrupados(inflater);
-                                                }
-                                            });
-                                        }
-                                    }
+                                    Log.d(TAG, "Platillos cargados desde Firestore: " + platillosFirestore.size());
                                 });
+                            }
+                        }
                     }
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error al cargar restaurantes: " + e.getMessage());
+                    Log.e(TAG, "Error al cargar restaurantes desde Firestore: " + e.getMessage());
                 });
     }
 }
