@@ -2,6 +2,7 @@ package com.example.sivareats.fragments;
 
 import android.os.Bundle;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,6 +15,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import com.example.sivareats.R;
@@ -923,7 +925,17 @@ public class HomeFragment extends Fragment {
         tituloRestaurante.setText(nombreRestaurante);
         tituloRestaurante.setTextSize(22);
         tituloRestaurante.setTypeface(null, android.graphics.Typeface.BOLD);
-        tituloRestaurante.setTextColor(0xFFFFFFFF); // Color blanco
+        // Usar color que se adapta al tema (claro/oscuro)
+        // Obtener el color del tema actual
+        TypedValue typedValue = new TypedValue();
+        getContext().getTheme().resolveAttribute(android.R.attr.textColorPrimary, typedValue, true);
+        if (typedValue.type >= TypedValue.TYPE_FIRST_COLOR_INT && 
+            typedValue.type <= TypedValue.TYPE_LAST_COLOR_INT) {
+            tituloRestaurante.setTextColor(typedValue.data);
+        } else {
+            // Fallback: usar text_primary que se adapta al tema
+            tituloRestaurante.setTextColor(ContextCompat.getColor(getContext(), R.color.text_primary));
+        }
         tituloRestaurante.setPadding(8, 16, 8, 12);
         contenedorRestaurante.addView(tituloRestaurante);
 
