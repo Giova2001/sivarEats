@@ -7,9 +7,12 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -57,9 +60,11 @@ public class RevisarPedidoActivity extends AppCompatActivity {
     private TextView tvClienteContactoInfo;
     private ImageView btnLlamar;
     private ImageView btnMensaje;
+    private MaterialAutoCompleteTextView spinnerEstado;
     
     private ProductosPedidoAdapter adapter;
     private List<Producto> productosList = new ArrayList<>();
+    private String estadoActual = "pendiente"; // Estado actual del pedido
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,6 +109,7 @@ public class RevisarPedidoActivity extends AppCompatActivity {
         tvClienteContactoInfo = findViewById(R.id.tvClienteContactoInfo);
         btnLlamar = findViewById(R.id.btnLlamar);
         btnMensaje = findViewById(R.id.btnMensaje);
+        spinnerEstado = findViewById(R.id.spinnerEstado);
         
         // Configurar RecyclerView
         adapter = new ProductosPedidoAdapter(productosList);
@@ -117,6 +123,8 @@ public class RevisarPedidoActivity extends AppCompatActivity {
         // Configurar botones de contacto
         btnLlamar.setOnClickListener(v -> llamarCliente());
         btnMensaje.setOnClickListener(v -> mensajearCliente());
+        
+        // El spinner se configurará después de cargar el estado del pedido
     }
 
     private void setupToolbar() {
@@ -124,6 +132,7 @@ public class RevisarPedidoActivity extends AppCompatActivity {
     }
 
     private void loadPedidoData() {
+        // Primero intentar cargar desde pedidos_pendientes
         db.collection("restaurantes").document(restauranteName)
                 .collection("pedidos_pendientes").document(pedidoId)
                 .get()
@@ -131,8 +140,28 @@ public class RevisarPedidoActivity extends AppCompatActivity {
                     if (documentSnapshot.exists()) {
                         mostrarDatosPedido(documentSnapshot);
                     } else {
-                        Toast.makeText(this, "Pedido no encontrado", Toast.LENGTH_SHORT).show();
-                        finish();
+                        // Si no está en pendientes, buscar en la colección del restaurante
+                        if (restauranteEmail != null && !restauranteEmail.isEmpty()) {
+                            db.collection("users").document(restauranteEmail)
+                                    .collection("pedidos").document(pedidoId)
+                                    .get()
+                                    .addOnSuccessListener(documentSnapshot2 -> {
+                                        if (documentSnapshot2.exists()) {
+                                            mostrarDatosPedido(documentSnapshot2);
+                                        } else {
+                                            Toast.makeText(this, "Pedido no encontrado", Toast.LENGTH_SHORT).show();
+                                            finish();
+                                        }
+                                    })
+                                    .addOnFailureListener(e -> {
+                                        Log.e(TAG, "Error al cargar pedido: " + e.getMessage());
+                                        Toast.makeText(this, "Error al cargar el pedido", Toast.LENGTH_SHORT).show();
+                                        finish();
+                                    });
+                        } else {
+                            Toast.makeText(this, "Pedido no encontrado", Toast.LENGTH_SHORT).show();
+                            finish();
+                        }
                     }
                 })
                 .addOnFailureListener(e -> {
@@ -143,6 +172,18 @@ public class RevisarPedidoActivity extends AppCompatActivity {
     }
 
     private void mostrarDatosPedido(DocumentSnapshot document) {
+        // Obtener estado actual del pedido
+        estadoActual = document.getString("estado");
+        if (estadoActual == null || estadoActual.isEmpty()) {
+            estadoActual = "pendiente";
+        }
+        
+        // Configurar spinner de estados después de obtener el estado
+        setupEstadoSpinner();
+        
+        // Actualizar UI según el estado
+        actualizarUIEstado();
+        
         // Obtener email del cliente
         clienteEmail = document.getString("clienteEmail");
         
@@ -288,9 +329,11 @@ public class RevisarPedidoActivity extends AppCompatActivity {
                                             .set(pedidoData)
                                             .addOnSuccessListener(aVoid3 -> {
                                                 Log.d(TAG, "Copia del pedido guardada en restaurante: " + restauranteEmail);
+                                                // Actualizar estado local y UI
+                                                estadoActual = "preparacion";
+                                                actualizarUIEstado();
                                                 Toast.makeText(this, "Pedido aceptado", Toast.LENGTH_SHORT).show();
-                                                setResult(RESULT_OK);
-                                                finish();
+                                                // No cerrar la actividad, permitir cambiar estados
                                             })
                                             .addOnFailureListener(e -> {
                                                 Log.e(TAG, "Error al guardar copia en restaurante: " + e.getMessage());
@@ -300,10 +343,11 @@ public class RevisarPedidoActivity extends AppCompatActivity {
                                                 finish();
                                             });
                                 } else {
-                                    // Si no hay email del restaurante, solo mostrar éxito
+                                    // Si no hay email del restaurante, actualizar estado local y UI
+                                    estadoActual = "preparacion";
+                                    actualizarUIEstado();
                                     Toast.makeText(this, "Pedido aceptado", Toast.LENGTH_SHORT).show();
-                                    setResult(RESULT_OK);
-                                    finish();
+                                    // No cerrar la actividad, permitir cambiar estados
                                 }
                             })
                             .addOnFailureListener(e -> {
@@ -380,6 +424,235 @@ public class RevisarPedidoActivity extends AppCompatActivity {
                             }
                         }
                     });
+        }
+    }
+    
+    /**
+     * Configura el spinner de estados con los estados disponibles según el estado actual
+     */
+    private void setupEstadoSpinner() {
+        // Definir estados posibles
+        String[] estadosDisponibles = obtenerEstadosDisponibles(estadoActual);
+        
+        // Crear adapter para el spinner
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, 
+                android.R.layout.simple_dropdown_item_1line, estadosDisponibles);
+        spinnerEstado.setAdapter(adapter);
+        
+        Log.d(TAG, "Spinner configurado con " + estadosDisponibles.length + " estados disponibles");
+        
+        // Establecer estado actual
+        String nombreEstadoActual = obtenerNombreEstado(estadoActual);
+        spinnerEstado.setText(nombreEstadoActual, false);
+        Log.d(TAG, "Estado actual establecido: " + nombreEstadoActual);
+        
+        // Listener para cambios de estado
+        spinnerEstado.setOnItemClickListener((parent, view, position, id) -> {
+            try {
+                String nuevoEstado = (String) parent.getItemAtPosition(position);
+                String estadoCodigo = obtenerCodigoEstado(nuevoEstado);
+                Log.d(TAG, "=== CLICK EN SPINNER ===");
+                Log.d(TAG, "Estado seleccionado: " + nuevoEstado);
+                Log.d(TAG, "Código de estado: " + estadoCodigo);
+                Log.d(TAG, "Estado actual: " + estadoActual);
+                
+                if (estadoCodigo != null && !estadoCodigo.equals(estadoActual)) {
+                    Log.d(TAG, "Cambiando estado de " + estadoActual + " a " + estadoCodigo);
+                    cambiarEstadoPedido(estadoCodigo);
+                } else if (estadoCodigo != null && estadoCodigo.equals(estadoActual)) {
+                    Log.d(TAG, "Estado seleccionado es el mismo que el actual, no se cambia");
+                } else {
+                    Log.w(TAG, "Código de estado es null o inválido");
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error en listener del spinner: " + e.getMessage(), e);
+            }
+        });
+        
+        // También agregar listener para cuando se cierra el dropdown
+        spinnerEstado.setOnDismissListener(() -> {
+            Log.d(TAG, "Dropdown cerrado");
+        });
+    }
+    
+    /**
+     * Obtiene los estados disponibles según el estado actual
+     * No se puede retroceder, solo avanzar
+     */
+    private String[] obtenerEstadosDisponibles(String estadoActual) {
+        List<String> estados = new ArrayList<>();
+        
+        // Siempre mostrar el estado actual
+        estados.add(obtenerNombreEstado(estadoActual));
+        
+        // Agregar estados siguientes según el estado actual
+        switch (estadoActual) {
+            case "pendiente":
+                // Desde pendiente se puede ir a preparacion
+                estados.add(obtenerNombreEstado("preparacion"));
+                break;
+            case "preparacion":
+                // Desde preparacion se puede ir a entregado a repartidor
+                estados.add(obtenerNombreEstado("entregado_repartidor"));
+                break;
+            case "entregado_repartidor":
+                // Ya está en el último estado, no hay más estados
+                break;
+            default:
+                // Si el estado no es reconocido, permitir avanzar a preparacion
+                if (!estados.contains(obtenerNombreEstado("preparacion"))) {
+                    estados.add(obtenerNombreEstado("preparacion"));
+                }
+                break;
+        }
+        
+        return estados.toArray(new String[0]);
+    }
+    
+    /**
+     * Convierte código de estado a nombre legible
+     */
+    private String obtenerNombreEstado(String codigo) {
+        switch (codigo) {
+            case "pendiente":
+                return "Validación del pedido";
+            case "preparacion":
+                return "En preparación";
+            case "entregado_repartidor":
+                return "Entregado a repartidor";
+            default:
+                return codigo;
+        }
+    }
+    
+    /**
+     * Convierte nombre de estado a código
+     */
+    private String obtenerCodigoEstado(String nombre) {
+        switch (nombre) {
+            case "Validación del pedido":
+                return "pendiente";
+            case "En preparación":
+                return "preparacion";
+            case "Entregado a repartidor":
+                return "entregado_repartidor";
+            default:
+                return nombre;
+        }
+    }
+    
+    /**
+     * Actualiza la UI según el estado actual del pedido
+     */
+    private void actualizarUIEstado() {
+        // Si el estado no es "pendiente", ocultar botones de aceptar/rechazar
+        if (!"pendiente".equals(estadoActual)) {
+            btnAceptar.setVisibility(View.GONE);
+            btnRechazar.setVisibility(View.GONE);
+        } else {
+            btnAceptar.setVisibility(View.VISIBLE);
+            btnRechazar.setVisibility(View.VISIBLE);
+        }
+        
+        // Actualizar spinner con estados disponibles
+        String[] estadosDisponibles = obtenerEstadosDisponibles(estadoActual);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, 
+                android.R.layout.simple_dropdown_item_1line, estadosDisponibles);
+        spinnerEstado.setAdapter(adapter);
+        spinnerEstado.setText(obtenerNombreEstado(estadoActual), false);
+    }
+    
+    /**
+     * Cambia el estado del pedido en Firebase
+     */
+    private void cambiarEstadoPedido(String nuevoEstado) {
+        if (nuevoEstado == null || nuevoEstado.equals(estadoActual)) {
+            return;
+        }
+        
+        // Validar que no se esté retrocediendo
+        if (!esProgresionValida(estadoActual, nuevoEstado)) {
+            Toast.makeText(this, "No se puede retroceder el estado del pedido", Toast.LENGTH_SHORT).show();
+            // Restaurar estado anterior en el spinner
+            spinnerEstado.setText(obtenerNombreEstado(estadoActual), false);
+            return;
+        }
+        
+        // Actualizar estado en Firebase
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("estado", nuevoEstado);
+        
+        // Actualizar en pedidos_pendientes si existe
+        db.collection("restaurantes").document(restauranteName)
+                .collection("pedidos_pendientes").document(pedidoId)
+                .update(updates)
+                .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "Estado actualizado en pedidos_pendientes");
+                })
+                .addOnFailureListener(e -> {
+                    Log.d(TAG, "Pedido no está en pedidos_pendientes, continuando...");
+                });
+        
+        // Actualizar en la colección del cliente
+        if (clienteEmail != null && !clienteEmail.isEmpty()) {
+            db.collection("users").document(clienteEmail)
+                    .collection("pedidos").document(pedidoId)
+                    .update(updates)
+                    .addOnSuccessListener(aVoid -> {
+                        Log.d(TAG, "Estado actualizado en usuario cliente");
+                    });
+        }
+        
+        // Actualizar en la colección del restaurante
+        if (restauranteEmail != null && !restauranteEmail.isEmpty()) {
+            db.collection("users").document(restauranteEmail)
+                    .collection("pedidos").document(pedidoId)
+                    .update(updates)
+                    .addOnSuccessListener(aVoid -> {
+                        Log.d(TAG, "Estado actualizado en restaurante");
+                        estadoActual = nuevoEstado;
+                        actualizarUIEstado();
+                        Toast.makeText(this, "Estado actualizado: " + obtenerNombreEstado(nuevoEstado), Toast.LENGTH_SHORT).show();
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Error al actualizar estado en restaurante: " + e.getMessage());
+                        Toast.makeText(this, "Error al actualizar el estado", Toast.LENGTH_SHORT).show();
+                        // Restaurar estado anterior en el spinner
+                        spinnerEstado.setText(obtenerNombreEstado(estadoActual), false);
+                    });
+        } else {
+            // Si no hay email del restaurante, actualizar estado local
+            estadoActual = nuevoEstado;
+            actualizarUIEstado();
+            Toast.makeText(this, "Estado actualizado: " + obtenerNombreEstado(nuevoEstado), Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    /**
+     * Valida que el cambio de estado sea una progresión válida (no retroceder)
+     */
+    private boolean esProgresionValida(String estadoActual, String nuevoEstado) {
+        // Definir orden de estados
+        int ordenActual = obtenerOrdenEstado(estadoActual);
+        int ordenNuevo = obtenerOrdenEstado(nuevoEstado);
+        
+        // Solo permitir avanzar (ordenNuevo > ordenActual)
+        return ordenNuevo > ordenActual;
+    }
+    
+    /**
+     * Obtiene el orden numérico de un estado (para validar progresión)
+     */
+    private int obtenerOrdenEstado(String estado) {
+        switch (estado) {
+            case "pendiente":
+                return 1;
+            case "preparacion":
+                return 2;
+            case "entregado_repartidor":
+                return 3;
+            default:
+                return 0;
         }
     }
 
