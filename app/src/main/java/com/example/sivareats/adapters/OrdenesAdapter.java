@@ -381,8 +381,11 @@ public class OrdenesAdapter extends RecyclerView.Adapter<OrdenesAdapter.ViewHold
             return;
         }
         
+        // Cuando se marca como entregado, cambiar el estado a "completado" en todas las ubicaciones
+        String estadoFinal = "completado"; // Cambiar a completado para que aparezca en historial
+        
         Map<String, Object> updates = new HashMap<>();
-        updates.put("estado", nuevoEstado);
+        updates.put("estado", estadoFinal);
         
         String pedidoId = pedido.getId();
         String restauranteName = pedido.getRestaurante();
@@ -403,7 +406,7 @@ public class OrdenesAdapter extends RecyclerView.Adapter<OrdenesAdapter.ViewHold
                 .collection("pedidos").document(pedidoId)
                 .update(updates)
                 .addOnSuccessListener(aVoid -> {
-                    Log.d("OrdenesAdapter", "Estado actualizado en repartidor");
+                    Log.d("OrdenesAdapter", "Estado actualizado en repartidor a completado");
                 });
         
         // 2. En la colección del cliente
@@ -412,61 +415,119 @@ public class OrdenesAdapter extends RecyclerView.Adapter<OrdenesAdapter.ViewHold
                     .collection("pedidos").document(pedidoId)
                     .update(updates)
                     .addOnSuccessListener(aVoid -> {
-                        Log.d("OrdenesAdapter", "Estado actualizado en cliente");
+                        Log.d("OrdenesAdapter", "Estado actualizado en cliente a completado");
                     });
         }
         
-        // 3. En pedidos_pendientes del restaurante
+        // 3. Para el restaurante: obtener el documento completo del pedido desde pedidos_pendientes,
+        // actualizarlo, guardarlo en la colección del restaurante para historial, y eliminarlo de pendientes
         if (restauranteName != null && !restauranteName.isEmpty()) {
+            // Obtener el documento completo del pedido desde pedidos_pendientes
             db.collection("restaurantes").document(restauranteName)
                     .collection("pedidos_pendientes").document(pedidoId)
-                    .update(updates)
-                    .addOnSuccessListener(aVoid -> {
-                        Log.d("OrdenesAdapter", "Estado actualizado en pedidos_pendientes del restaurante");
-                        
-                        // 4. También actualizar en la colección del restaurante (users/{restauranteEmail}/pedidos)
-                        // Primero obtener el email del restaurante
-                        db.collection("users")
-                                .whereEqualTo("name", restauranteName)
-                                .whereEqualTo("rol", "RESTAURANTE")
-                                .limit(1)
-                                .get()
-                                .addOnSuccessListener(queryDocumentSnapshots -> {
-                                    if (!queryDocumentSnapshots.isEmpty()) {
-                                        String restauranteEmail = queryDocumentSnapshots.getDocuments().get(0).getId();
-                                        db.collection("users").document(restauranteEmail)
-                                                .collection("pedidos").document(pedidoId)
-                                                .update(updates)
-                                                .addOnSuccessListener(aVoid2 -> {
-                                                    Log.d("OrdenesAdapter", "Estado actualizado en colección del restaurante");
-                                                    pedido.setEstado(nuevoEstado);
-                                                    Toast.makeText(context, "Estado actualizado: " + obtenerNombreEstadoRepartidor(nuevoEstado), Toast.LENGTH_SHORT).show();
-                                                })
-                                                .addOnFailureListener(e -> {
-                                                    Log.e("OrdenesAdapter", "Error al actualizar en restaurante: " + e.getMessage());
-                                                    pedido.setEstado(nuevoEstado);
-                                                    Toast.makeText(context, "Estado actualizado: " + obtenerNombreEstadoRepartidor(nuevoEstado), Toast.LENGTH_SHORT).show();
-                                                });
-                                    } else {
-                                        pedido.setEstado(nuevoEstado);
-                                        Toast.makeText(context, "Estado actualizado: " + obtenerNombreEstadoRepartidor(nuevoEstado), Toast.LENGTH_SHORT).show();
-                                    }
-                                })
-                                .addOnFailureListener(e -> {
-                                    Log.e("OrdenesAdapter", "Error al buscar restaurante: " + e.getMessage());
-                                    pedido.setEstado(nuevoEstado);
-                                    Toast.makeText(context, "Estado actualizado: " + obtenerNombreEstadoRepartidor(nuevoEstado), Toast.LENGTH_SHORT).show();
-                                });
+                    .get()
+                    .addOnSuccessListener(documentSnapshot -> {
+                        if (documentSnapshot.exists()) {
+                            // Obtener todos los datos del pedido
+                            Map<String, Object> pedidoData = new HashMap<>(documentSnapshot.getData());
+                            // Actualizar el estado a completado
+                            pedidoData.put("estado", estadoFinal);
+                            
+                            // Buscar el email del restaurante para guardar en su colección
+                            db.collection("users")
+                                    .whereEqualTo("name", restauranteName)
+                                    .whereEqualTo("rol", "RESTAURANTE")
+                                    .limit(1)
+                                    .get()
+                                    .addOnSuccessListener(queryDocumentSnapshots -> {
+                                        if (!queryDocumentSnapshots.isEmpty()) {
+                                            String restauranteEmail = queryDocumentSnapshots.getDocuments().get(0).getId();
+                                            
+                                            // Guardar el pedido completo en la colección del restaurante para historial
+                                            db.collection("users").document(restauranteEmail)
+                                                    .collection("pedidos").document(pedidoId)
+                                                    .set(pedidoData)
+                                                    .addOnSuccessListener(aVoid -> {
+                                                        Log.d("OrdenesAdapter", "Pedido guardado en historial del restaurante");
+                                                        
+                                                        // Eliminar de pedidos_pendientes ya que está completado
+                                                        db.collection("restaurantes").document(restauranteName)
+                                                                .collection("pedidos_pendientes").document(pedidoId)
+                                                                .delete()
+                                                                .addOnSuccessListener(aVoid2 -> {
+                                                                    Log.d("OrdenesAdapter", "Pedido eliminado de pedidos_pendientes");
+                                                                    pedido.setEstado(estadoFinal);
+                                                                    Toast.makeText(context, "Pedido completado exitosamente", Toast.LENGTH_SHORT).show();
+                                                                })
+                                                                .addOnFailureListener(e -> {
+                                                                    Log.e("OrdenesAdapter", "Error al eliminar de pendientes: " + e.getMessage());
+                                                                    pedido.setEstado(estadoFinal);
+                                                                    Toast.makeText(context, "Pedido completado exitosamente", Toast.LENGTH_SHORT).show();
+                                                                });
+                                                    })
+                                                    .addOnFailureListener(e -> {
+                                                        Log.e("OrdenesAdapter", "Error al guardar en historial restaurante: " + e.getMessage());
+                                                        // Aún así, actualizar el estado en pendientes y eliminar
+                                                        db.collection("restaurantes").document(restauranteName)
+                                                                .collection("pedidos_pendientes").document(pedidoId)
+                                                                .update(updates)
+                                                                .addOnSuccessListener(aVoid -> {
+                                                                    db.collection("restaurantes").document(restauranteName)
+                                                                            .collection("pedidos_pendientes").document(pedidoId)
+                                                                            .delete();
+                                                                });
+                                                        pedido.setEstado(estadoFinal);
+                                                        Toast.makeText(context, "Estado actualizado", Toast.LENGTH_SHORT).show();
+                                                    });
+                                        } else {
+                                            Log.e("OrdenesAdapter", "Restaurante no encontrado");
+                                            // Aún así, actualizar el estado en pendientes
+                                            db.collection("restaurantes").document(restauranteName)
+                                                    .collection("pedidos_pendientes").document(pedidoId)
+                                                    .update(updates);
+                                            pedido.setEstado(estadoFinal);
+                                            Toast.makeText(context, "Estado actualizado", Toast.LENGTH_SHORT).show();
+                                        }
+                                    })
+                                    .addOnFailureListener(e -> {
+                                        Log.e("OrdenesAdapter", "Error al buscar restaurante: " + e.getMessage());
+                                        // Aún así, actualizar el estado en pendientes
+                                        db.collection("restaurantes").document(restauranteName)
+                                                .collection("pedidos_pendientes").document(pedidoId)
+                                                .update(updates);
+                                        pedido.setEstado(estadoFinal);
+                                        Toast.makeText(context, "Estado actualizado", Toast.LENGTH_SHORT).show();
+                                    });
+                        } else {
+                            Log.e("OrdenesAdapter", "Pedido no encontrado en pedidos_pendientes");
+                            // Si no está en pendientes, solo actualizar en otras ubicaciones
+                            // Intentar guardar en la colección del restaurante si existe
+                            db.collection("users")
+                                    .whereEqualTo("name", restauranteName)
+                                    .whereEqualTo("rol", "RESTAURANTE")
+                                    .limit(1)
+                                    .get()
+                                    .addOnSuccessListener(queryDocumentSnapshots -> {
+                                        if (!queryDocumentSnapshots.isEmpty()) {
+                                            String restauranteEmail = queryDocumentSnapshots.getDocuments().get(0).getId();
+                                            db.collection("users").document(restauranteEmail)
+                                                    .collection("pedidos").document(pedidoId)
+                                                    .update(updates);
+                                        }
+                                        pedido.setEstado(estadoFinal);
+                                        Toast.makeText(context, "Estado actualizado", Toast.LENGTH_SHORT).show();
+                                    });
+                        }
                     })
                     .addOnFailureListener(e -> {
-                        Log.e("OrdenesAdapter", "Error al actualizar estado: " + e.getMessage());
+                        Log.e("OrdenesAdapter", "Error al obtener pedido de pendientes: " + e.getMessage());
                         Toast.makeText(context, "Error al actualizar el estado", Toast.LENGTH_SHORT).show();
                         // Restaurar estado anterior
                         holder.spinnerEstado.setText(obtenerNombreEstadoRepartidor(estadoActual), false);
                     });
         } else {
-            pedido.setEstado(nuevoEstado);
-            Toast.makeText(context, "Estado actualizado: " + obtenerNombreEstadoRepartidor(nuevoEstado), Toast.LENGTH_SHORT).show();
+            pedido.setEstado(estadoFinal);
+            Toast.makeText(context, "Estado actualizado", Toast.LENGTH_SHORT).show();
         }
     }
 }
