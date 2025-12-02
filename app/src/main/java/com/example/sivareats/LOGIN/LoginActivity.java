@@ -107,6 +107,13 @@ public class LoginActivity extends AppCompatActivity {
             Intent intent = new Intent(LoginActivity.this, LoginRegisterActivity.class);
             startActivity(intent);
         });
+        
+        // Ir a recuperación de contraseña
+        TextView tvOlvidePassword = findViewById(R.id.tvOlvidePassword);
+        tvOlvidePassword.setOnClickListener(v -> {
+            Intent intent = new Intent(LoginActivity.this, ForgotPasswordActivity.class);
+            startActivity(intent);
+        });
     }
 
     private void setupModeSwitching() {

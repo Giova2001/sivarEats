@@ -75,6 +75,25 @@
             android:name=".LOGIN.LoginRegisterActivity"
             android:exported="false" />
         <activity
+            android:name=".LOGIN.ForgotPasswordActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".LOGIN.ResetPasswordActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".LOGIN.VerificationCodeActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".LOGIN.NewPasswordActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".LOGIN.PasswordResetSuccessActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.NavegacionActivity"
             android:exported="false" />
         <activity
