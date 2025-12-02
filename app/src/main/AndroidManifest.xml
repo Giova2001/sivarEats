@@ -73,7 +73,8 @@
             android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".LOGIN.LoginRegisterActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".LOGIN.ForgotPasswordActivity"
             android:exported="false"

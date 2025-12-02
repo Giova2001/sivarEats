@@ -6,11 +6,16 @@ import android.util.Patterns;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import com.example.sivareats.R;
+import com.google.android.material.card.MaterialCardView;
 import com.example.sivareats.data.AppDatabase;
 import com.example.sivareats.data.User;
 import com.example.sivareats.data.UserDao;
@@ -33,6 +38,14 @@ public class LoginRegisterActivity extends AppCompatActivity {
     private EditText etName, etEmail, etPassword, etConfirmPassword;
     private Button btnRegister;
     private ImageButton btnBack;
+    
+    // Selección de rol
+    private MaterialCardView cardUsuarioNormal, cardRestaurante, cardRepartidor;
+    private android.widget.TextView tvUsuarioNormalTitle, tvUsuarioNormalDesc;
+    private android.widget.TextView tvRestauranteTitle, tvRestauranteDesc;
+    private android.widget.TextView tvRepartidorTitle, tvRepartidorDesc;
+    private android.widget.ImageView ivUsuarioNormal, ivRestaurante, ivRepartidor;
+    private String selectedRol = "USUARIO_NORMAL"; // Por defecto
 
     private UserDao userDao;
     private final ExecutorService ioExecutor = Executors.newSingleThreadExecutor();
@@ -58,16 +71,119 @@ public class LoginRegisterActivity extends AppCompatActivity {
         etConfirmPassword = findViewById(R.id.etConfirmPassword);
         btnRegister = findViewById(R.id.btnRegister);
         btnBack = findViewById(R.id.btnBack);
+        
+        // Cards de selección de rol
+        cardUsuarioNormal = findViewById(R.id.cardUsuarioNormal);
+        cardRestaurante = findViewById(R.id.cardRestaurante);
+        cardRepartidor = findViewById(R.id.cardRepartidor);
+        
+        // TextViews e ImageViews de los cards
+        tvUsuarioNormalTitle = findViewById(R.id.tvUsuarioNormalTitle);
+        tvUsuarioNormalDesc = findViewById(R.id.tvUsuarioNormalDesc);
+        tvRestauranteTitle = findViewById(R.id.tvRestauranteTitle);
+        tvRestauranteDesc = findViewById(R.id.tvRestauranteDesc);
+        tvRepartidorTitle = findViewById(R.id.tvRepartidorTitle);
+        tvRepartidorDesc = findViewById(R.id.tvRepartidorDesc);
+        
+        ivUsuarioNormal = findViewById(R.id.ivUsuarioNormal);
+        ivRestaurante = findViewById(R.id.ivRestaurante);
+        ivRepartidor = findViewById(R.id.ivRepartidor);
 
         // Room
         AppDatabase db = AppDatabase.getInstance(this);
         userDao = db.userDao();
+
+        // Configurar selección de rol
+        setupRoleSelection();
 
         // Volver
         btnBack.setOnClickListener(v -> finish());
 
         // Registrar (local + Firestore)
         btnRegister.setOnClickListener(v -> registerUserLocal());
+    }
+    
+    private void setupRoleSelection() {
+        // Por defecto seleccionar USUARIO_NORMAL
+        selectRole("USUARIO_NORMAL");
+        
+        cardUsuarioNormal.setOnClickListener(v -> selectRole("USUARIO_NORMAL"));
+        cardRestaurante.setOnClickListener(v -> selectRole("RESTAURANTE"));
+        cardRepartidor.setOnClickListener(v -> selectRole("REPARTIDOR"));
+    }
+    
+    private void selectRole(String rol) {
+        selectedRol = rol;
+        
+        // Resetear todos los cards
+        resetRoleCards();
+        
+        // Resaltar el card seleccionado
+        switch (rol) {
+            case "USUARIO_NORMAL":
+                highlightCard(cardUsuarioNormal);
+                break;
+            case "RESTAURANTE":
+                highlightCard(cardRestaurante);
+                break;
+            case "REPARTIDOR":
+                highlightCard(cardRepartidor);
+                break;
+        }
+    }
+    
+    private void resetRoleCards() {
+        unhighlightCard(cardUsuarioNormal);
+        unhighlightCard(cardRestaurante);
+        unhighlightCard(cardRepartidor);
+    }
+    
+    private void highlightCard(MaterialCardView card) {
+        card.setCardBackgroundColor(ContextCompat.getColor(this, R.color.info));
+        card.setStrokeColor(ContextCompat.getColor(this, R.color.info));
+        card.setCardElevation(4f);
+        card.setStrokeWidth(2);
+        
+        // Cambiar colores de texto e iconos a blanco
+        if (card == cardUsuarioNormal) {
+            tvUsuarioNormalTitle.setTextColor(ContextCompat.getColor(this, android.R.color.white));
+            tvUsuarioNormalDesc.setTextColor(ContextCompat.getColor(this, android.R.color.white));
+            ivUsuarioNormal.setColorFilter(ContextCompat.getColor(this, android.R.color.white));
+        } else if (card == cardRestaurante) {
+            tvRestauranteTitle.setTextColor(ContextCompat.getColor(this, android.R.color.white));
+            tvRestauranteDesc.setTextColor(ContextCompat.getColor(this, android.R.color.white));
+            ivRestaurante.setColorFilter(ContextCompat.getColor(this, android.R.color.white));
+        } else if (card == cardRepartidor) {
+            tvRepartidorTitle.setTextColor(ContextCompat.getColor(this, android.R.color.white));
+            tvRepartidorDesc.setTextColor(ContextCompat.getColor(this, android.R.color.white));
+            ivRepartidor.setColorFilter(ContextCompat.getColor(this, android.R.color.white));
+        }
+    }
+    
+    private void unhighlightCard(MaterialCardView card) {
+        card.setCardBackgroundColor(ContextCompat.getColor(this, android.R.color.transparent));
+        card.setStrokeColor(ContextCompat.getColor(this, R.color.divider));
+        card.setCardElevation(2f);
+        card.setStrokeWidth(1);
+        
+        // Restaurar colores de texto e iconos según el tema
+        // Los colores ya están definidos en colors.xml y se adaptan automáticamente al tema
+        int colorOnSurface = ContextCompat.getColor(this, R.color.on_surface);
+        int colorOnSurfaceVariant = ContextCompat.getColor(this, R.color.text_secondary);
+        
+        if (card == cardUsuarioNormal) {
+            tvUsuarioNormalTitle.setTextColor(colorOnSurface);
+            tvUsuarioNormalDesc.setTextColor(colorOnSurfaceVariant);
+            ivUsuarioNormal.setColorFilter(colorOnSurface);
+        } else if (card == cardRestaurante) {
+            tvRestauranteTitle.setTextColor(colorOnSurface);
+            tvRestauranteDesc.setTextColor(colorOnSurfaceVariant);
+            ivRestaurante.setColorFilter(colorOnSurface);
+        } else if (card == cardRepartidor) {
+            tvRepartidorTitle.setTextColor(colorOnSurface);
+            tvRepartidorDesc.setTextColor(colorOnSurfaceVariant);
+            ivRepartidor.setColorFilter(colorOnSurface);
+        }
     }
 
     private void registerUserLocal() {
@@ -98,7 +214,9 @@ public class LoginRegisterActivity extends AppCompatActivity {
                     return;
                 }
 
-                long id = userDao.insert(new User(fName, fEmail, password));
+                User newUser = new User(fName, fEmail, password);
+                newUser.setRol(selectedRol); // Establecer el rol seleccionado
+                long id = userDao.insert(newUser);
 
                 runOnUiThread(() -> {
                     toast("Registro local exitoso (ID " + id + ")");
@@ -162,7 +280,7 @@ public class LoginRegisterActivity extends AppCompatActivity {
                 data.put("alias", localUser != null && localUser.getAlias() != null ? localUser.getAlias() : "");
                 data.put("telefono", localUser != null && localUser.getTelefono() != null ? localUser.getTelefono() : "");
                 data.put("profile_image_url", localUser != null && localUser.getProfileImageUrl() != null ? localUser.getProfileImageUrl() : "");
-                data.put("rol", localUser != null && localUser.getRol() != null ? localUser.getRol() : "USUARIO_NORMAL");
+                data.put("rol", localUser != null && localUser.getRol() != null && !localUser.getRol().isEmpty() ? localUser.getRol() : selectedRol);
                 data.put("createdAt", FieldValue.serverTimestamp());
                 data.put("lastLoginAt", FieldValue.serverTimestamp());
 
@@ -184,7 +302,7 @@ public class LoginRegisterActivity extends AppCompatActivity {
                 basicData.put("alias", "");
                 basicData.put("telefono", "");
                 basicData.put("profile_image_url", "");
-                basicData.put("rol", "USUARIO_NORMAL");
+                basicData.put("rol", selectedRol);
                 basicData.put("createdAt", FieldValue.serverTimestamp());
                 basicData.put("lastLoginAt", FieldValue.serverTimestamp());
 
