@@ -1,12 +1,13 @@
 package com.example.sivareats.LOGIN;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.util.Patterns;
 import android.widget.Button;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.sivareats.R;
@@ -21,6 +22,7 @@ public class ResetPasswordActivity extends AppCompatActivity {
     private Button btnContinue;
     private FirebaseAuth mAuth;
     private android.app.ProgressDialog progressDialog;
+    private static final String TAG = "ResetPasswordActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,46 +67,46 @@ public class ResetPasswordActivity extends AppCompatActivity {
     }
 
     private void sendPasswordResetEmail(String email) {
-        showLoadingDialog("Enviando código de verificación...");
+        showLoadingDialog("Enviando enlace de recuperación...");
         
-        // Primero verificar si el usuario existe en Firebase Auth
-        mAuth.fetchSignInMethodsForEmail(email)
+        Log.d(TAG, "Enviando email de recuperación a: " + email);
+        
+        // Usar Firebase Auth nativo para enviar el email de recuperación
+        mAuth.sendPasswordResetEmail(email)
                 .addOnCompleteListener(task -> {
-                    if (task.isSuccessful() && task.getResult() != null && task.getResult().getSignInMethods() != null && !task.getResult().getSignInMethods().isEmpty()) {
-                        // El usuario existe, enviar email de recuperación
-                        mAuth.sendPasswordResetEmail(email)
-                                .addOnCompleteListener(resetTask -> {
-                                    hideLoadingDialog();
-                                    if (resetTask.isSuccessful()) {
-                                        // Email enviado exitosamente
-                                        Intent intent = new Intent(ResetPasswordActivity.this, VerificationCodeActivity.class);
-                                        intent.putExtra("email", email);
-                                        startActivity(intent);
-                                    } else {
-                                        String errorMsg = resetTask.getException() != null ? 
-                                                resetTask.getException().getMessage() : "Error desconocido";
-                                        Toast.makeText(this, "Error al enviar email: " + errorMsg, Toast.LENGTH_SHORT).show();
-                                    }
-                                });
-                    } else {
-                        hideLoadingDialog();
-                        Toast.makeText(this, "Este correo electrónico no está registrado", Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .addOnFailureListener(e -> {
                     hideLoadingDialog();
-                    // Si falla la verificación, intentar enviar de todas formas
-                    mAuth.sendPasswordResetEmail(email)
-                            .addOnCompleteListener(resetTask -> {
-                                if (resetTask.isSuccessful()) {
-                                    Intent intent = new Intent(ResetPasswordActivity.this, VerificationCodeActivity.class);
-                                    intent.putExtra("email", email);
-                                    startActivity(intent);
-                                } else {
-                                    Toast.makeText(this, "Error al enviar email de recuperación", Toast.LENGTH_SHORT).show();
-                                }
-                            });
+                    
+                    if (task.isSuccessful()) {
+                        // Email enviado exitosamente
+                        Log.d(TAG, "Email de recuperación enviado exitosamente");
+                        mostrarDialogoExito(email);
+                    } else {
+                        String errorMsg = task.getException() != null ? 
+                                task.getException().getMessage() : "Error desconocido";
+                        Log.e(TAG, "Error al enviar email: " + errorMsg);
+                        
+                        // Verificar si es error de usuario no encontrado
+                        if (errorMsg.contains("user-not-found") || errorMsg.contains("no user record")) {
+                            Toast.makeText(this, "Este correo electrónico no está registrado", Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(this, "Error al enviar email: " + errorMsg, Toast.LENGTH_SHORT).show();
+                        }
+                    }
                 });
+    }
+    
+    private void mostrarDialogoExito(String email) {
+        new AlertDialog.Builder(this)
+                .setTitle("Email enviado")
+                .setMessage("Se ha enviado un enlace de recuperación de contraseña a:\n\n" + email + "\n\n" +
+                        "Revisa tu correo electrónico y haz clic en el enlace para restablecer tu contraseña.\n\n" +
+                        "Si no recibes el email, verifica tu carpeta de spam.")
+                .setPositiveButton("Entendido", (dialog, which) -> {
+                    // Volver a la pantalla de login
+                    finish();
+                })
+                .setCancelable(false)
+                .show();
     }
 
     private void showLoadingDialog(String message) {

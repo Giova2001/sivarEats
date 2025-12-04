@@ -84,17 +84,6 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
         <activity
-            android:name=".LOGIN.VerificationCodeActivity"
-            android:exported="false"
-            android:windowSoftInputMode="adjustResize" />
-        <activity
-            android:name=".LOGIN.NewPasswordActivity"
-            android:exported="false"
-            android:windowSoftInputMode="adjustResize" />
-        <activity
-            android:name=".LOGIN.PasswordResetSuccessActivity"
-            android:exported="false" />
-        <activity
             android:name=".ui.NavegacionActivity"
             android:exported="false" />
         <activity
