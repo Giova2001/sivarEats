@@ -29,6 +29,7 @@ import com.example.sivareats.R;
 import com.example.sivareats.data.Ubicacion;
 import com.example.sivareats.ui.NavegacionActivity;
 import com.example.sivareats.ui.checkout.SeleccionarMetodoPagoActivity;
+import com.example.sivareats.ui.profile.LocationEditActivity;
 import com.example.sivareats.viewmodel.UbicacionViewModel;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
@@ -104,8 +105,11 @@ public class EnvioFragment extends Fragment implements OnMapReadyCallback {
         // Botón Mi Ubicación (YA dentro del mapa)
         btnMiUbicacion.setOnClickListener(v -> centrarEnMiUbicacion());
 
-        // Botón agregar ubicación
-        opAgregar.setOnClickListener(v -> mostrarDialogoTipoUbicacion());
+        // Botón agregar ubicación - navegar a la actividad de agregar ubicación
+        opAgregar.setOnClickListener(v -> {
+            Intent intent = new Intent(requireContext(), com.example.sivareats.ui.profile.LocationEditActivity.class);
+            startActivityForResult(intent, 1002); // Usar código para detectar cuando regrese
+        });
 
         // Cargar direcciones guardadas
         cargarDirecciones();
@@ -151,6 +155,15 @@ public class EnvioFragment extends Fragment implements OnMapReadyCallback {
         });
 
         return view;
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 1002 && resultCode == android.app.Activity.RESULT_OK) {
+            // Recargar direcciones cuando el usuario regrese de agregar una ubicación
+            cargarDirecciones();
+        }
     }
 
     @Override

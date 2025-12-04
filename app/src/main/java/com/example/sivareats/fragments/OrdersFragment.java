@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -55,6 +57,9 @@ public class OrdersFragment extends Fragment {
     private boolean isRepartidor = false; // Flag para saber si el usuario es repartidor
 
     private static final String TAG = "OrdersFragment";
+    private static final long UPDATE_INTERVAL = 10000; // Actualizar cada 10 segundos
+    private Handler updateHandler;
+    private Runnable updateRunnable;
 
     public OrdersFragment() {
         // Required empty public constructor
@@ -166,9 +171,28 @@ public class OrdersFragment extends Fragment {
 
         isViewCreated = true;
 
+        // Inicializar Handler para actualización automática
+        updateHandler = new Handler(Looper.getMainLooper());
+        updateRunnable = new Runnable() {
+            @Override
+            public void run() {
+                // Actualizar pedidos si la vista está creada y no se está cargando
+                if (isViewCreated && userEmail != null && !isLoading) {
+                    Log.d(TAG, "Actualización automática de pedidos");
+                    cargarPedidosDesdeFirebase();
+                }
+                // Programar próxima actualización
+                if (updateHandler != null && isViewCreated) {
+                    updateHandler.postDelayed(this, UPDATE_INTERVAL);
+                }
+            }
+        };
+
         // Cargar pedidos desde Firebase solo cuando la vista está lista
         if (userEmail != null) {
             cargarPedidosDesdeFirebase();
+            // Iniciar actualización automática
+            updateHandler.postDelayed(updateRunnable, UPDATE_INTERVAL);
         }
 
         return view;
@@ -177,9 +201,14 @@ public class OrdersFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
+        isViewCreated = true;
         // Solo recargar pedidos si la vista ya fue creada y no se está cargando actualmente
-        if (isViewCreated && userEmail != null && !isLoading) {
+        if (userEmail != null && !isLoading) {
             cargarPedidosDesdeFirebase();
+        }
+        // Reiniciar actualización automática cuando el fragment vuelve a estar visible
+        if (updateHandler != null && updateRunnable != null) {
+            updateHandler.postDelayed(updateRunnable, UPDATE_INTERVAL);
         }
     }
 
@@ -187,6 +216,21 @@ public class OrdersFragment extends Fragment {
     public void onPause() {
         super.onPause();
         isViewCreated = false;
+        // Detener actualización automática cuando el fragment no está visible
+        if (updateHandler != null && updateRunnable != null) {
+            updateHandler.removeCallbacks(updateRunnable);
+        }
+    }
+    
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        // Limpiar Handler cuando se destruye la vista
+        if (updateHandler != null && updateRunnable != null) {
+            updateHandler.removeCallbacks(updateRunnable);
+        }
+        updateHandler = null;
+        updateRunnable = null;
     }
     
     @Override

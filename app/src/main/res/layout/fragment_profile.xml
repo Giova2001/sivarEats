@@ -93,17 +93,23 @@
             <!-- Fila 1 -->
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="300px"
-                android:orientation="horizontal">
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:baselineAligned="false">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnMetodoPago"
                     style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="300px"
-                    android:layout_marginBottom="20dp"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    android:layout_marginBottom="8dp"
+                    android:minHeight="56dp"
                     android:text="Método de pago"
                     android:textColor="@color/text_primary"
+                    android:ellipsize="end"
+                    android:maxLines="2"
                     app:icon="@drawable/ic_payment"
                     app:iconGravity="textStart"
                     app:iconPadding="8dp"
@@ -112,11 +118,16 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnEditarPerfil"
                     style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="300px"
-                    android:layout_marginBottom="20dp"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginBottom="8dp"
+                    android:minHeight="56dp"
                     android:text="Editar Perfil"
                     android:textColor="@color/text_primary"
+                    android:ellipsize="end"
+                    android:maxLines="2"
                     app:icon="@drawable/ic_edit"
                     app:iconGravity="textStart"
                     app:iconPadding="8dp"

@@ -13,6 +13,8 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.location.Location;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -78,6 +80,11 @@ public class AssignOrderFragment extends Fragment implements OnMapReadyCallback 
     private Pedido pedidoSeleccionado;
     private Marker markerSeleccionado;
     private Location ubicacionRepartidor;
+    
+    // Actualización automática
+    private static final long UPDATE_INTERVAL = 15000; // Actualizar cada 15 segundos
+    private Handler updateHandler;
+    private Runnable updateRunnable;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -98,8 +105,28 @@ public class AssignOrderFragment extends Fragment implements OnMapReadyCallback 
         // Inicializar mapa
         initMap();
 
+        // Inicializar Handler para actualización automática
+        updateHandler = new Handler(Looper.getMainLooper());
+        updateRunnable = new Runnable() {
+            @Override
+            public void run() {
+                // Actualizar pedidos disponibles periódicamente
+                if (isAdded() && repartidorEmail != null) {
+                    Log.d(TAG, "Actualización automática de pedidos disponibles");
+                    cargarPedidosDisponibles();
+                }
+                // Programar próxima actualización
+                if (updateHandler != null && isAdded()) {
+                    updateHandler.postDelayed(this, UPDATE_INTERVAL);
+                }
+            }
+        };
+
         // Cargar pedidos disponibles
         cargarPedidosDisponibles();
+        
+        // Iniciar actualización automática
+        updateHandler.postDelayed(updateRunnable, UPDATE_INTERVAL);
 
         return view;
     }
@@ -225,6 +252,11 @@ public class AssignOrderFragment extends Fragment implements OnMapReadyCallback 
         if (mMap != null) {
             mMap.clear();
         }
+        
+        // Si había un pedido seleccionado, limpiarlo
+        if (pedidoSeleccionado != null) {
+            ocultarDetalles();
+        }
 
         // Cargar todos los restaurantes y luego buscar pedidos en cada uno
         db.collection("restaurantes")
@@ -262,6 +294,14 @@ public class AssignOrderFragment extends Fragment implements OnMapReadyCallback 
                                     
                                     for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
                                         try {
+                                            // Verificar si el pedido ya tiene un repartidor asignado
+                                            String repartidorAsignado = document.getString("repartidorEmail");
+                                            if (repartidorAsignado != null && !repartidorAsignado.isEmpty()) {
+                                                // Este pedido ya está asignado, no mostrarlo
+                                                Log.d(TAG, "Pedido " + document.getId() + " ya tiene repartidor asignado: " + repartidorAsignado);
+                                                continue;
+                                            }
+                                            
                                             Pedido pedido = convertirDocumentoAPedido(document);
                                             if (pedido != null) {
                                                 // Obtener coordenadas del restaurante desde el pedido
@@ -567,6 +607,36 @@ public class AssignOrderFragment extends Fragment implements OnMapReadyCallback 
         pedidoSeleccionado = pedido;
         markerSeleccionado = marker;
 
+        // Verificar si el pedido ya tiene repartidor asignado
+        String pedidoId = pedido.getId();
+        if (pedidoId != null) {
+            // Buscar el pedido en Firebase para verificar si ya tiene repartidor
+            db.collection("restaurantes").document(pedido.getRestaurante())
+                    .collection("pedidos_pendientes").document(pedidoId)
+                    .get()
+                    .addOnSuccessListener(documentSnapshot -> {
+                        if (documentSnapshot.exists()) {
+                            String repartidorAsignado = documentSnapshot.getString("repartidorEmail");
+                            
+                            // Si ya tiene repartidor asignado, ocultar el botón
+                            if (repartidorAsignado != null && !repartidorAsignado.isEmpty()) {
+                                btnAceptarPedido.setVisibility(View.GONE);
+                                Log.d(TAG, "Pedido ya tiene repartidor asignado, ocultando botón");
+                            } else {
+                                btnAceptarPedido.setVisibility(View.VISIBLE);
+                            }
+                        } else {
+                            // Si no existe en pendientes, puede que ya esté asignado
+                            btnAceptarPedido.setVisibility(View.GONE);
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Error al verificar estado del pedido: " + e.getMessage());
+                        // Por defecto, mostrar el botón
+                        btnAceptarPedido.setVisibility(View.VISIBLE);
+                    });
+        }
+
         // Mostrar información del restaurante
         tvRestauranteNombre.setText(pedido.getRestaurante());
         tvPedidoId.setText("ID: " + pedido.getId());
@@ -704,10 +774,26 @@ public class AssignOrderFragment extends Fragment implements OnMapReadyCallback 
                                     // Remover de la lista
                                     pedidosDisponibles.remove(pedidoId);
                                     
+                                    // Remover marcador del mapa si existe
+                                    Marker markerToRemove = null;
+                                    for (Map.Entry<Marker, String> entry : markerToPedidoId.entrySet()) {
+                                        if (entry.getValue().equals(pedidoId)) {
+                                            markerToRemove = entry.getKey();
+                                            break;
+                                        }
+                                    }
+                                    if (markerToRemove != null) {
+                                        markerToRemove.remove();
+                                        markerToPedidoId.remove(markerToRemove);
+                                    }
+                                    
                                     // Ocultar detalles
                                     ocultarDetalles();
                                     
                                     Toast.makeText(requireContext(), "Pedido aceptado", Toast.LENGTH_SHORT).show();
+                                    
+                                    // Recargar pedidos disponibles para actualizar la lista
+                                    cargarPedidosDisponibles();
                                 })
                                 .addOnFailureListener(e -> {
                                     Log.e(TAG, "Error al guardar pedido en repartidor: " + e.getMessage());
@@ -813,6 +899,30 @@ public class AssignOrderFragment extends Fragment implements OnMapReadyCallback 
         if (db != null) {
             cargarPedidosDisponibles();
         }
+        // Reiniciar actualización automática
+        if (updateHandler != null && updateRunnable != null) {
+            updateHandler.postDelayed(updateRunnable, UPDATE_INTERVAL);
+        }
+    }
+    
+    @Override
+    public void onPause() {
+        super.onPause();
+        // Detener actualización automática cuando el fragment no está visible
+        if (updateHandler != null && updateRunnable != null) {
+            updateHandler.removeCallbacks(updateRunnable);
+        }
+    }
+    
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        // Limpiar Handler cuando se destruye la vista
+        if (updateHandler != null && updateRunnable != null) {
+            updateHandler.removeCallbacks(updateRunnable);
+        }
+        updateHandler = null;
+        updateRunnable = null;
     }
     
     /**
