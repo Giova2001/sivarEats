@@ -248,14 +248,17 @@ public class AssignOrderFragment extends Fragment implements OnMapReadyCallback 
                     for (com.google.firebase.firestore.QueryDocumentSnapshot restauranteDoc : restaurantesSnapshot) {
                         final String restauranteName = restauranteDoc.getId();
                         
-                        // Buscar pedidos con estado "entregado_repartidor" en cada restaurante
+                        // Buscar pedidos disponibles para repartidor:
+                        // - "entregado_repartidor": Listos para entregar
+                        // - "preparacion": En preparación (también disponibles)
+                        // - "pendiente": Pendientes (también disponibles)
                         db.collection("restaurantes").document(restauranteName)
                                 .collection("pedidos_pendientes")
-                                .whereEqualTo("estado", "entregado_repartidor")
+                                .whereIn("estado", java.util.Arrays.asList("entregado_repartidor", "preparacion", "pendiente"))
                                 .get()
                                 .addOnSuccessListener(queryDocumentSnapshots -> {
                                     restaurantesProcesados[0]++;
-                                    Log.d(TAG, "Restaurante " + restauranteName + ": " + queryDocumentSnapshots.size() + " pedidos con estado entregado_repartidor");
+                                    Log.d(TAG, "Restaurante " + restauranteName + ": " + queryDocumentSnapshots.size() + " pedidos disponibles");
                                     
                                     for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
                                         try {
@@ -274,8 +277,8 @@ public class AssignOrderFragment extends Fragment implements OnMapReadyCallback 
                                                     float distanciaMetros = ubicacionRepartidor.distanceTo(locationRestaurante);
                                                     float distanciaKm = distanciaMetros / 1000;
 
-                                                    // Solo agregar si está dentro de 1km
-                                                    if (distanciaKm <= 1.0) {
+                                                    // Solo agregar si está dentro de 5km (aumentado para incluir más pedidos)
+                                                    if (distanciaKm <= 5.0) {
                                                         String pedidoId = pedido.getId();
                                                         if (pedidoId != null && !pedidosDisponibles.containsKey(pedidoId)) {
                                                             pedidosDisponibles.put(pedidoId, pedido);
@@ -301,9 +304,9 @@ public class AssignOrderFragment extends Fragment implements OnMapReadyCallback 
                                     
                                     // Cuando se procesen todos los restaurantes, mostrar resultado
                                     if (restaurantesProcesados[0] >= totalRestaurantes) {
-                                        Log.d(TAG, "Pedidos disponibles cargados: " + pedidosDisponibles.size() + " dentro de 1km");
+                                        Log.d(TAG, "Pedidos disponibles cargados: " + pedidosDisponibles.size() + " dentro de 5km");
                                         if (pedidosDisponibles.isEmpty()) {
-                                            Toast.makeText(requireContext(), "No hay pedidos disponibles en un radio de 1km", Toast.LENGTH_SHORT).show();
+                                            Toast.makeText(requireContext(), "No hay pedidos disponibles en un radio de 5km", Toast.LENGTH_SHORT).show();
                                         } else {
                                             Toast.makeText(requireContext(), "Se encontraron " + pedidosDisponibles.size() + " pedidos cercanos", Toast.LENGTH_SHORT).show();
                                         }
@@ -341,46 +344,76 @@ public class AssignOrderFragment extends Fragment implements OnMapReadyCallback 
                     if (!queryDocumentSnapshots.isEmpty()) {
                         com.google.firebase.firestore.DocumentSnapshot doc = queryDocumentSnapshots.getDocuments().get(0);
                         
-                        // Intentar obtener coordenadas del pedido primero
-                        Map<String, Object> pedidoData = doc.getData();
                         Double lat = null;
                         Double lng = null;
+                        Map<String, Object> restauranteData = doc.getData();
                         
-                        // Buscar coordenadas en el pedido
-                        if (pedidoData != null) {
-                            Object latObj = pedidoData.get("restauranteLat");
-                            Object lngObj = pedidoData.get("restauranteLng");
+                        // Buscar coordenadas en el documento del restaurante (latitud/longitud)
+                        if (restauranteData != null) {
+                            // Intentar diferentes nombres de campos para coordenadas
+                            Object latObj = restauranteData.get("latitud");
+                            Object lngObj = restauranteData.get("longitud");
+                            
+                            if (latObj == null) latObj = restauranteData.get("latitude");
+                            if (lngObj == null) lngObj = restauranteData.get("longitude");
                             
                             if (latObj instanceof Number) lat = ((Number) latObj).doubleValue();
                             if (lngObj instanceof Number) lng = ((Number) lngObj).doubleValue();
                         }
                         
-                        // Si no hay coordenadas en el pedido, usar coordenadas por defecto o del restaurante
+                        // Si no hay coordenadas del restaurante, usar coordenadas por defecto (San Salvador)
+                        // pero aún así mostrar el pedido
                         if (lat == null || lng == null) {
-                            // Usar coordenadas por defecto (San Salvador)
                             lat = 13.6929;
                             lng = -89.2182;
+                            Log.d(TAG, "No se encontraron coordenadas del restaurante " + restauranteName + ", usando coordenadas por defecto");
                         }
                         
-                        // Verificar distancia antes de agregar
-                        if (ubicacionRepartidor != null) {
-                            Location locationRestaurante = new Location("restaurante");
-                            locationRestaurante.setLatitude(lat);
-                            locationRestaurante.setLongitude(lng);
+                        // Agregar el pedido a la lista de disponibles y mostrar en el mapa
+                        // (no filtrar por distancia si no tenemos coordenadas reales)
+                        String pedidoId = pedido.getId();
+                        if (pedidoId != null && !pedidosDisponibles.containsKey(pedidoId)) {
+                            pedidosDisponibles.put(pedidoId, pedido);
                             
-                            float distanciaMetros = ubicacionRepartidor.distanceTo(locationRestaurante);
-                            float distanciaKm = distanciaMetros / 1000;
+                            // Verificar distancia solo si tenemos coordenadas válidas
+                            boolean mostrarEnMapa = true;
+                            if (ubicacionRepartidor != null && lat != 13.6929 && lng != -89.2182) {
+                                Location locationRestaurante = new Location("restaurante");
+                                locationRestaurante.setLatitude(lat);
+                                locationRestaurante.setLongitude(lng);
+                                
+                                float distanciaMetros = ubicacionRepartidor.distanceTo(locationRestaurante);
+                                float distanciaKm = distanciaMetros / 1000;
+                                
+                                // Solo mostrar en mapa si está dentro de 5km (aumentar radio para pedidos sin coordenadas exactas)
+                                mostrarEnMapa = distanciaKm <= 5.0;
+                            }
                             
-                            // Solo agregar si está dentro de 1km
-                            if (distanciaKm <= 1.0) {
+                            if (mostrarEnMapa) {
                                 LatLng restauranteLocation = new LatLng(lat, lng);
                                 cargarLogoYAgregarMarcador(restauranteLocation, restauranteName, pedido);
                             }
+                        }
+                    } else {
+                        Log.w(TAG, "No se encontró restaurante con nombre: " + restauranteName);
+                        // Aún así, agregar el pedido con coordenadas por defecto
+                        String pedidoId = pedido.getId();
+                        if (pedidoId != null && !pedidosDisponibles.containsKey(pedidoId)) {
+                            pedidosDisponibles.put(pedidoId, pedido);
+                            LatLng restauranteLocation = new LatLng(13.6929, -89.2182);
+                            cargarLogoYAgregarMarcador(restauranteLocation, restauranteName, pedido);
                         }
                     }
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error al cargar ubicación del restaurante: " + e.getMessage());
+                    // Aún así, agregar el pedido con coordenadas por defecto
+                    String pedidoId = pedido.getId();
+                    if (pedidoId != null && !pedidosDisponibles.containsKey(pedidoId)) {
+                        pedidosDisponibles.put(pedidoId, pedido);
+                        LatLng restauranteLocation = new LatLng(13.6929, -89.2182);
+                        cargarLogoYAgregarMarcador(restauranteLocation, restauranteName, pedido);
+                    }
                 });
     }
     
@@ -628,6 +661,14 @@ public class AssignOrderFragment extends Fragment implements OnMapReadyCallback 
                                     });
                         }
 
+                        // Obtener coordenadas del restaurante si están disponibles en el marcador
+                        Double restauranteLat = null;
+                        Double restauranteLng = null;
+                        if (markerSeleccionado != null) {
+                            restauranteLat = markerSeleccionado.getPosition().latitude;
+                            restauranteLng = markerSeleccionado.getPosition().longitude;
+                        }
+                        
                         // Guardar pedido en colección del repartidor
                         Map<String, Object> pedidoData = new HashMap<>();
                         pedidoData.put("id", pedidoId);
@@ -641,6 +682,12 @@ public class AssignOrderFragment extends Fragment implements OnMapReadyCallback 
                         pedidoData.put("repartidorEmail", repartidorEmail);
                         pedidoData.put("repartidorNombre", repartidorNombre);
                         pedidoData.put("repartidorTelefono", repartidorTelefono);
+                        
+                        // Agregar coordenadas del restaurante si están disponibles
+                        if (restauranteLat != null && restauranteLng != null) {
+                            pedidoData.put("restauranteLat", restauranteLat);
+                            pedidoData.put("restauranteLng", restauranteLng);
+                        }
 
                         db.collection("users").document(repartidorEmail)
                                 .collection("pedidos").document(pedidoId)
@@ -689,7 +736,7 @@ public class AssignOrderFragment extends Fragment implements OnMapReadyCallback 
             double total = totalDouble != null ? totalDouble : 0.0;
 
             String estado = document.getString("estado");
-            if (estado == null) estado = "entregado_repartidor";
+            if (estado == null) estado = "pendiente";
 
             // Obtener fecha
             java.util.Date fecha;
