@@ -10,6 +10,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.example.sivareats.R;
 import com.example.sivareats.data.AppDatabase;
 import com.example.sivareats.data.cart.CartDao;
@@ -26,10 +27,12 @@ public class CarritoAdapter extends RecyclerView.Adapter<CarritoAdapter.ViewHold
     private OnCantidadChangeListener listener;
 
     private CartDao cartDao;
+    private Context context;
 
     private ExecutorService executor = Executors.newSingleThreadExecutor();
 
     public CarritoAdapter(Context context, List<CartItem> lista) {
+        this.context = context;
         this.listaCart = lista;
         this.cartDao = AppDatabase.getInstance(context).cartDao();
     }
@@ -51,7 +54,19 @@ public class CarritoAdapter extends RecyclerView.Adapter<CarritoAdapter.ViewHold
         holder.tvPrecio.setText("$" + String.format("%.2f", item.getPrecio()));
         holder.tvCantidad.setText(String.valueOf(item.getCantidad()));
 
-        holder.imgProducto.setImageResource(item.getImageResId());
+        // Cargar imagen desde Firebase si hay URL, sino usar resource ID
+        String imagenUrl = item.getImagenUrl();
+        if (imagenUrl != null && !imagenUrl.isEmpty()) {
+            Glide.with(context)
+                    .load(imagenUrl)
+                    .placeholder(R.drawable.campero1)
+                    .error(R.drawable.campero1)
+                    .into(holder.imgProducto);
+        } else if (item.getImageResId() != 0) {
+            holder.imgProducto.setImageResource(item.getImageResId());
+        } else {
+            holder.imgProducto.setImageResource(R.drawable.campero1);
+        }
 
         // SUMAR cantidad
         holder.btnSumar.setOnClickListener(v -> {

@@ -1183,12 +1183,13 @@ public class HomeFragment extends Fragment {
                 });
 
                 btnAgregar.setOnClickListener(v -> {
-                    // Crear CartItem a partir de Producto, incluyendo el restaurante
+                    // Crear CartItem a partir de Producto, incluyendo el restaurante y URL de imagen
                     com.example.sivareats.data.cart.CartItem item =
                             new com.example.sivareats.data.cart.CartItem(
                                     p.getNombre(),
                                     p.getDescripcion(),
-                                    p.getImagenResId(), // usa resource id
+                                    p.getImagenResId(), // resource id como fallback
+                                    p.getImagenUrl() != null ? p.getImagenUrl() : "", // URL de imagen desde Firebase
                                     p.getPrecio(),
                                     1, // cantidad inicial
                                     p.getRestaurante() // restaurante del producto

@@ -16,7 +16,7 @@ import com.example.sivareats.data.cart.CartItem;
                 PaymentMethod.class,
                 CartItem.class
         },
-        version = 5,
+        version = 6,
         exportSchema = false
 )
 public abstract class AppDatabase extends RoomDatabase {

@@ -286,8 +286,10 @@ public class RestaurantDetailActivity extends AppCompatActivity {
                                 platillo.getNombre(),
                                 platillo.getDescripcion(),
                                 0, // resource ID (no usado si hay URL)
+                                platillo.getImagenUrl(), // URL de imagen desde Firebase
                                 platillo.getPrecio(),
-                                1
+                                1,
+                                restaurantName // restaurante
                         );
                 
                 ioExecutor.execute(() -> cartDao.insert(item));

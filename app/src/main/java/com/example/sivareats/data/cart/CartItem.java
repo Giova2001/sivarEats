@@ -13,15 +13,17 @@ public class CartItem {
     private String nombre;
     private String descripcion;
     private int imageResId;
+    private String imagenUrl; // URL de imagen desde Firebase/Cloudinary
     private double precio;
     private int cantidad;
     private String restaurante; // Nombre del restaurante
 
-    // Constructor principal para Room (con restaurante)
-    public CartItem(String nombre, String descripcion, int imageResId, double precio, int cantidad, String restaurante) {
+    // Constructor principal para Room (con restaurante y URL de imagen)
+    public CartItem(String nombre, String descripcion, int imageResId, String imagenUrl, double precio, int cantidad, String restaurante) {
         this.nombre = nombre;
         this.descripcion = descripcion;
         this.imageResId = imageResId;
+        this.imagenUrl = imagenUrl != null ? imagenUrl : "";
         this.precio = precio;
         this.cantidad = cantidad;
         this.restaurante = restaurante != null ? restaurante : "";
@@ -29,8 +31,20 @@ public class CartItem {
     
     // Constructor sin restaurante (marcado como @Ignore para Room)
     @Ignore
+    public CartItem(String nombre, String descripcion, int imageResId, String imagenUrl, double precio, int cantidad) {
+        this(nombre, descripcion, imageResId, imagenUrl, precio, cantidad, "");
+    }
+    
+    // Constructor legacy sin imagenUrl (marcado como @Ignore para Room)
+    @Ignore
+    public CartItem(String nombre, String descripcion, int imageResId, double precio, int cantidad, String restaurante) {
+        this(nombre, descripcion, imageResId, "", precio, cantidad, restaurante);
+    }
+    
+    // Constructor legacy sin restaurante ni imagenUrl (marcado como @Ignore para Room)
+    @Ignore
     public CartItem(String nombre, String descripcion, int imageResId, double precio, int cantidad) {
-        this(nombre, descripcion, imageResId, precio, cantidad, "");
+        this(nombre, descripcion, imageResId, "", precio, cantidad, "");
     }
 
     public int getId() { return id; }
@@ -44,6 +58,9 @@ public class CartItem {
 
     public int getImageResId() { return imageResId; }
     public void setImageResId(int imageResId) { this.imageResId = imageResId; }
+
+    public String getImagenUrl() { return imagenUrl != null ? imagenUrl : ""; }
+    public void setImagenUrl(String imagenUrl) { this.imagenUrl = imagenUrl != null ? imagenUrl : ""; }
 
     public double getPrecio() { return precio; }
     public void setPrecio(double precio) { this.precio = precio; }
