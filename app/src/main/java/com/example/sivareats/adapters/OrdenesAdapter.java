@@ -14,7 +14,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.sivareats.R;
-import com.example.sivareats.model.Pedido;
+import com.example.sivareats.data.Pedido;
 import com.example.sivareats.ui.ordenes.RastreandoPedidoActivity;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;

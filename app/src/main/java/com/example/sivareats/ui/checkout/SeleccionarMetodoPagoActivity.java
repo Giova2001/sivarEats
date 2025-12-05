@@ -19,10 +19,9 @@ import androidx.appcompat.widget.Toolbar;
 
 import com.example.sivareats.R;
 import com.example.sivareats.data.AppDatabase;
-import com.example.sivareats.data.PaymentMethod;
 import com.example.sivareats.data.cart.CartDao;
 import com.example.sivareats.data.cart.CartItem;
-import com.example.sivareats.model.Producto;
+import com.example.sivareats.data.Producto;
 import com.example.sivareats.ui.profile.EditMetodoPagoActivity;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
@@ -33,7 +32,6 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

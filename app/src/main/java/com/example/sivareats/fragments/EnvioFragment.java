@@ -1,11 +1,8 @@
 package com.example.sivareats.fragments;
 
 import android.Manifest;
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.location.Location;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
@@ -27,10 +24,8 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.sivareats.R;
 import com.example.sivareats.data.Ubicacion;
-import com.example.sivareats.ui.NavegacionActivity;
 import com.example.sivareats.ui.checkout.SeleccionarMetodoPagoActivity;
-import com.example.sivareats.ui.profile.LocationEditActivity;
-import com.example.sivareats.viewmodel.UbicacionViewModel;
+import com.example.sivareats.utils.UbicacionViewModel;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -41,8 +36,6 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.material.textfield.TextInputEditText;
-
-import java.util.List;
 
 public class EnvioFragment extends Fragment implements OnMapReadyCallback {
 

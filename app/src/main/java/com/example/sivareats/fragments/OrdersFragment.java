@@ -19,8 +19,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.sivareats.R;
 import com.example.sivareats.adapters.OrdenesAdapter;
-import com.example.sivareats.model.Pedido;
-import com.example.sivareats.model.Producto;
+import com.example.sivareats.data.Pedido;
+import com.example.sivareats.data.Producto;
 import com.example.sivareats.model.UserType;
 import com.example.sivareats.ui.ordenes.RastreandoPedidoActivity;
 import com.example.sivareats.ui.restaurant.RevisarPedidoActivity;

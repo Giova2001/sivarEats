@@ -1,6 +1,5 @@
 package com.example.sivareats.fragments;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.TypedValue;
@@ -20,8 +19,8 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import com.example.sivareats.R;
-import com.example.sivareats.model.CartViewModel;
-import com.example.sivareats.model.Producto;
+import com.example.sivareats.data.CartViewModel;
+import com.example.sivareats.data.Producto;
 import com.example.sivareats.utils.SearchHistoryManager;
 import com.example.sivareats.utils.FavoritosManager;
 import com.google.android.material.button.MaterialButton;

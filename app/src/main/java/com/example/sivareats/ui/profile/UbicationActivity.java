@@ -17,7 +17,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.sivareats.R;
 import com.example.sivareats.adapters.UbicationAdapter;
 import com.example.sivareats.data.Ubicacion;
-import com.example.sivareats.viewmodel.UbicacionViewModel;
+import com.example.sivareats.utils.UbicacionViewModel;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.firestore.FirebaseFirestore;

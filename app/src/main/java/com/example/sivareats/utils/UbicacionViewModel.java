@@ -1,4 +1,4 @@
-package com.example.sivareats.viewmodel;
+package com.example.sivareats.utils;
 
 import android.app.Application;
 

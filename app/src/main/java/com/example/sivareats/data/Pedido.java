@@ -1,4 +1,4 @@
-package com.example.sivareats.model;
+package com.example.sivareats.data;
 
 import java.util.Date;
 import java.util.List;

@@ -1,4 +1,4 @@
-package com.example.sivareats.model;
+package com.example.sivareats.data;
 
 public class Producto {
     private String nombre;
